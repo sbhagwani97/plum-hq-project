@@ -6,11 +6,11 @@ Build an AI-powered pipeline that accepts health insurance claim submissions (me
 
 ---
 
-## Approach: Backend-First, Then Frontend
+## Approach: Progressive Co-Development (Backend + UI)
 
-> **Focus order**: Core data models → Policy engine → Document agents → Decision orchestrator → REST API → UI
+> **Focus order**: Progressive vertical slices. Each phase delivers backend components/endpoints and the corresponding UI, allowing user-facing and programmatic testing side-by-side.
 
-The system will be a **multi-agent pipeline** (bonus points) where each agent has a narrow, testable responsibility and passes structured output to the next. The orchestrator manages failures gracefully, so one bad agent doesn't crash the whole system.
+The system will be a **multi-agent pipeline** (bonus points) utilizing the `deepagents` SDK. Each agent has a narrow, testable responsibility. The orchestrator manages failures gracefully, ensuring that localized issues do not halt the entire system.
 
 ---
 
@@ -33,7 +33,7 @@ The system will be a **multi-agent pipeline** (bonus points) where each agent ha
 | Database | **SQLite** (dev) → **PostgreSQL** (prod) | Structured claim storage, easy to run locally |
 | ~~Task Queue~~ | ~~Celery~~ — **removed** | LangGraph manages async orchestration natively; FastAPI `async/await` handles the rest. No external broker needed. |
 | Document Storage | Local filesystem (dev) → S3-compatible | PDF/image uploads |
-| Frontend | **Next.js** or plain **React + Vite** | TBD — defer to frontend phase |
+| Frontend | **HTML + Vanilla CSS & JS** | Simple, fast, lightweight, served directly by FastAPI |
 
 ---
 
@@ -467,14 +467,9 @@ Script that runs all 12 test cases against the live system and produces the Eval
 
 ---
 
-## Frontend Phase (Deferred)
+## Frontend (HTML + CSS + Vanilla JS)
 
-> **📝 YOUR NOTES HERE** — Frontend:
-> *e.g., Do you want a Next.js app or a simpler React + Vite SPA? Should the UI show the full trace visually (timeline view), or just the decision summary? Any design preferences?*
->
-> ```
-> [Your comments here]
-> ```
+The UI will be a single-page application built using pure HTML, Vanilla CSS, and modern JavaScript. It will be served directly by the FastAPI backend under `/` (main page) and static assets under `/static` to ensure a unified local setup.
 
 The UI will have:
 - **Claim submission form** — member selector, category, date, amount, document upload (drag & drop, multi-file)
@@ -483,36 +478,93 @@ The UI will have:
 
 ---
 
-## Execution Order (Backend Phase)
+## Execution Order (Progressive Phases)
 
-```
-Phase 1 — Foundation (Day 1 AM)
-  1. Project structure & dependencies (pyproject.toml / requirements.txt)
-  2. Data models (claim.py, policy models)
-  3. Policy loader (load + validate policy_terms.json)
+### Phase 1: Environment, Basic API & Dashboard Layout
+* **Backend**:
+  * Set up monorepo directory structure (`backend/` and `frontend/`).
+  * Initialize backend dependencies (`FastAPI`, `pydantic`, `deepagents` SDK, etc.).
+  * Define core data models (`backend/models/claim.py`).
+  * Implement initial `/health` status and mock claim submit endpoints.
+* **Frontend**:
+  * Set up directory structure for static files in `backend/static/` and `backend/templates/`.
+  * Design visual foundation (`index.css` design system: harmonized HSL colors, modern fonts, dark/light theme tokens).
+  * Build the main layout/navigation shell (`index.html`).
+  * Build a simple mock claims dashboard page displaying history list.
+* **Testable Deliverable**:
+  * Launch backend and frontend locally. Verify frontend shell runs and successfully displays mock claims by contacting the backend health endpoint.
 
-Phase 2 — Policy Engine (Day 1 PM)
-  4. Policy engine (all rules, pure functions)
-  5. Policy engine unit tests (TC004–TC012 policy assertions)
+### Phase 2: Policy Engine & Member Validation
+* **Backend**:
+  * Implement `backend/policy/loader.py` to load and validate `policy_terms.json`.
+  * Build the pure Python deterministic `PolicyEngine` (`backend/policy/engine.py`) covering waiting periods, exclusions, limits, etc.
+  * Build Member Validator Agent (`backend/agents/member_validator.py`) and write policy engine unit tests.
+  * Expose REST endpoints: `GET /policy/members` and `GET /policy/coverage`.
+* **Frontend**:
+  * Create a Member lookup / Eligibility check screen.
+  * Fetch roster from `GET /policy/members`.
+  * Provide input form for treatment date and claim category.
+  * Connect to Policy Engine logic to instantly show waiting period status and category eligibility.
+* **Testable Deliverable**:
+  * User can select a member on the UI, choose a category, and verify whether the policy engine flags them as eligible or ineligible (e.g. waiting periods, category covered/excluded), matching the raw policy rules.
 
-Phase 3 — Agents (Day 2)
-  6. Member validator agent
-  7. Document verifier agent (rule-based type check first, LLM quality check second)
-  8. Document extractor agent (Gemini Vision)
-  9. Decision agent
+### Phase 3: Two-Tier Document Parsing & Verification UI
+* **Backend**:
+  * Implement Document Verifier Agent (validates MIME types & file formats against policy requirements).
+  * Implement Document Extractor Agent:
+    * Tier 1 local parser (`pdfplumber`/`python-docx`/`python-pptx` or direct TXT read).
+    * Tier 2 vision-based LLM parser configuration (Together AI Llama vision model) for scanned PDFs and image files.
+  * Expose a temporary endpoint `POST /claims/verify-docs` to process files and return structured extraction JSON, `parser_used`, and confidence scores.
+* **Frontend**:
+  * Create an interactive Document Upload & Verification screen.
+  * Implement drag-and-drop file uploader with type validation.
+  * Connect uploader to `POST /claims/verify-docs`.
+  * Display the extracted structured fields side-by-side with confidence highlights (color-coded badges for `HIGH`/`MEDIUM`/`LOW` fields) and indicators of which parsing tier was used (`local_parser` or `advanced_parser`).
+* **Testable Deliverable**:
+  * User can drag and drop a clean PDF (processed via Tier 1) vs a scanned image (processed via Tier 2 LLM) and visually inspect the extracted fields, confidence tags, and the exact parsing tier.
 
-Phase 4 — Orchestration + API (Day 2–3)
-  10. Claim orchestrator (pipeline + graceful failure)
-  11. Database models + repository
-  12. FastAPI routes
-  13. Integration tests (all 12 test cases)
+### Phase 4: Claims Orchestration, DB Persistence & End-to-End Decisioning
+* **Backend**:
+  * Implement the core `ClaimOrchestrator` (`backend/orchestrator/pipeline.py`) to chain all agents together.
+  * Implement `agent_guard` error handling wrapper to handle subagent failures gracefully without crashing.
+  * Implement Decision Agent (`backend/agents/decision_agent.py`) combining rule-based policy results and fuzzy LLM exclusion checks.
+  * Set up database models and Repository (SQLAlchemy + SQLite) to store claim submissions and final decisions.
+  * Expose full `POST /claims/submit` and `GET /claims/{claim_id}` endpoints.
+* **Frontend**:
+  * Connect the multi-step claim submission form:
+    1. Select Member & Info.
+    2. Upload Documents & Preview Extraction.
+    3. Submit Claim (with active loading/processing state).
+  * Create the Claim Decision Review screen:
+    * Render decision status badges (`APPROVED`, `PARTIAL`, `REJECTED`, `MANUAL_REVIEW`).
+    * Display financial calculations (discounts, co-pay adjustments, approved amount vs claimed amount).
+    * Show lists of specific policy adjustments and reasons.
+* **Testable Deliverable**:
+  * Submit a full claim through the UI. Verify that the claim is written to the database, processed through the orchestrator, and returns a detailed decision screen.
 
-Phase 5 — Frontend + Eval (Day 3)
-  14. React/Next.js UI
-  15. Eval report generation
-  16. Architecture document
-  17. Component contracts document
-```
+### Phase 5: Trace Builder & Observability Timeline
+* **Backend**:
+  * Complete Trace Builder (`backend/tracing/trace_builder.py`) to construct the detailed `ClaimTrace` JSON.
+  * Persist the claim trace in the SQLite database.
+  * Expose `GET /claims/{claim_id}/trace` endpoint.
+* **Frontend**:
+  * Build the visual Audit Trace Timeline:
+    * Render a clean step-by-step accordion list on the Decision Review screen showing each agent run (e.g. `member_validator` success, `doc_verifier` warning, `doc_extractor` stats, `decision_agent` reasoning).
+    * Display agent status, latency (ms), confidence impacts, and warning/error details.
+  * Add a simple Claims history/list view showing all historical claim submissions and their status.
+* **Testable Deliverable**:
+  * View any historical claim and expand its visual trace timeline, verifying that latency and agent logs are displayed correctly, showing the "how" behind the claim decision.
+
+### Phase 6: Automated Evaluation & Polish
+* **Backend**:
+  * Finalize all integration tests for the orchestrator.
+  * Implement `backend/eval/run_eval.py` to run all 12 test cases from `test_cases.json`.
+  * Execute evaluation suite and auto-generate `eval_report.md` summarizing pass/fail metrics.
+* **Frontend + Documentation**:
+  * Refine the user interface (smooth transitions, visual touch-ups, dark mode aesthetics).
+  * Write the Architecture Document (`architecture.md`).
+* **Testable Deliverable**:
+  * Run `pytest` and `run_eval.py` to confirm all 12 test cases behave correctly. Deliver a polished frontend displaying the exact system behavior.
 
 ---
 
