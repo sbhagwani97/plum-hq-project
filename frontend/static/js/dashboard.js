@@ -240,6 +240,61 @@ async function handleMemberSearch() {
   }
 }
 
+// ── Document Verification ─────────────────────────────────────────────────────
+
+async function handleDocUpload() {
+  const fileInput = document.getElementById('doc-upload-input');
+  const resultDiv = document.getElementById('doc-verify-result');
+  const file = fileInput.files[0];
+  
+  if (!file) return;
+  
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<span class="spinner"></span>Extracting and verifying document...';
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/claims/verify-docs`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Server error: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    
+    const { verification, extracted_text_preview } = data;
+    
+    const fieldsHtml = Object.entries(verification.key_fields || {}).map(([key, val]) => `
+      <div style="margin-bottom: 0.5rem;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">${key}</span>
+        <div style="font-weight: 500;">${val}</div>
+      </div>
+    `).join('');
+    
+    resultDiv.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div style="font-weight: 700; font-size: 1.1rem;">Type: ${verification.document_type}</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+        ${fieldsHtml}
+      </div>
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Raw Text Preview</div>
+        <pre style="font-size: 0.8rem; background: var(--bg-base); padding: 0.5rem; border-radius: var(--radius-sm); overflow-x: auto; max-height: 150px; overflow-y: auto; color: var(--text-primary);">${extracted_text_preview}</pre>
+      </div>
+    `;
+    
+  } catch (err) {
+    resultDiv.innerHTML = `<span style="color: var(--status-rejected);">⚠️ ${err.message}</span>`;
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -256,5 +311,10 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleMemberSearch();
     });
+  }
+  
+  const docUploadBtn = document.getElementById('doc-upload-btn');
+  if (docUploadBtn) {
+    docUploadBtn.addEventListener('click', handleDocUpload);
   }
 });

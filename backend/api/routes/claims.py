@@ -146,6 +146,39 @@ async def health_check() -> dict[str, str]:
 async def get_mock_claims() -> list[dict[str, Any]]:
     """
     Returns mock claim records for Phase 1 dashboard display.
-    Will be replaced by real DB queries in Phase 4.
     """
     return _MOCK_CLAIMS
+
+
+from fastapi import File, UploadFile
+from backend.extractors.tier1_local import extract_text
+from backend.extractors.tier2_vision import extract_text_from_image
+from backend.agents.document_verifier import verify_document
+
+@router.post("/claims/verify-docs")
+async def verify_docs(file: UploadFile = File(...)) -> dict[str, Any]:
+    """Temporary endpoint for Phase 3 document verification."""
+    file_bytes = await file.read()
+    ext = file.filename.split(".")[-1].lower() if file.filename else ""
+    
+    try:
+        # Route to Tier 1 or Tier 2 based on extension
+        if ext in ["pdf", "docx", "doc", "txt"]:
+            text = extract_text(file_bytes, file.filename)
+        elif ext in ["jpg", "jpeg", "png", "webp"]:
+            text = extract_text_from_image(file_bytes, file.content_type or "image/jpeg")
+        else:
+            return {"error": f"Unsupported file type: {ext}"}
+            
+        # Verify document using Qwen
+        verification = verify_document(text)
+        
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "verification": verification.dict(),
+            "extracted_text_preview": text[:500] + "..." if len(text) > 500 else text
+        }
+    except Exception as e:
+        return {"error": str(e)}
+

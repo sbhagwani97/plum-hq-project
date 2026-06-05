@@ -14,12 +14,12 @@
   - `[-]` Add policy engine unit tests (`backend/policy/tests/test_engine.py`) - Skipped
   - `[x]` Expose REST endpoints: `GET /policy/members` and `GET /policy/coverage`
   - `[x]` Implement frontend Member lookup screen with eligibility check rules
-- `[ ]` Phase 3: Two-Tier Document Parsing & Verification UI
-  - `[ ]` Implement Document Verifier Agent (`backend/agents/document_verifier.py`) for type verification
-  - `[ ]` Implement Tier 1 Document Extractor (local text parsing for PDF/TXT/DOCX/PPTX)
-  - `[ ]` Implement Tier 2 Document Extractor (Together AI vision parsing for scans/images)
-  - `[ ]` Expose temporary verification endpoint `POST /claims/verify-docs`
-  - `[ ]` Build interactive Document Upload & Verification screen with color-coded confidence metrics
+- `[x]` Phase 3: Two-Tier Document Parsing & Verification UI
+  - `[x]` Implement Document Verifier Agent (`backend/agents/document_verifier.py`) for type verification
+  - `[x]` Implement Tier 1 Document Extractor (local text parsing for PDF/TXT/DOCX/PPTX)
+  - `[x]` Implement Tier 2 Document Extractor (Together AI vision parsing for scans/images)
+  - `[x]` Expose temporary verification endpoint `POST /claims/verify-docs`
+  - `[x]` Build interactive Document Upload & Verification screen with color-coded confidence metrics
 - `[ ]` Phase 4: Claims Orchestration, DB Persistence & End-to-End Decisioning
   - `[ ]` Implement core `ClaimOrchestrator` (`backend/orchestrator/pipeline.py`) with `agent_guard`
   - `[ ]` Implement Decision Agent (`backend/agents/decision_agent.py`) combining deterministic policy engine and fuzzy LLM exclusion matching
