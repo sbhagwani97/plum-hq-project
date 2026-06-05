@@ -1,0 +1,32 @@
+┌─────────────────────────────────────────────────────┐
+│  Thyrocare Technologies Limited                     │
+│  D-37/1, TTC MIDC, Turbhe, Navi Mumbai - 400703     │
+│  NABL Accredited Laboratory                         │
+├─────────────────────────────────────────────────────┤
+│  Patient Name: Kavita Nair        Age/Sex: 28/F     │
+│  Ref. Doctor: Dr. Amit Patel      Date: 10-Oct-2024 │
+│  Barcode Number: T892837492       Sample: Blood     │
+├─────────────────────────────────────────────────────┤
+│  COMPLETE BLOOD COUNT (CBC)                         │
+│                                                     │
+│  Test Description      Result      Reference Range  │
+│  ------------------------------------------------   │
+│  Hemoglobin            11.5 g/dL   12.0 - 15.0      │
+│  Total WBC Count       6,500 /cumm 4000 - 10000     │
+│  Platelet Count        2.1 Lac/cmm 1.5 - 4.5        │
+│  RBC Count             4.2 mill/cm 3.8 - 4.8        │
+│  PCV (Hematocrit)      35%         36 - 46          │
+│                                                     │
+│  LIPID PROFILE                                      │
+│                                                     │
+│  Test Description      Result      Reference Range  │
+│  ------------------------------------------------   │
+│  Total Cholesterol     185 mg/dL   < 200            │
+│  Triglycerides         140 mg/dL   < 150            │
+│  HDL Cholesterol       45 mg/dL    40 - 60          │
+│  LDL Cholesterol       112 mg/dL   < 130            │
+├─────────────────────────────────────────────────────┤
+│  Note: Hemoglobin is slightly below reference range.│
+│                                                     │
+│                            [Verified by Pathologist]│
+└─────────────────────────────────────────────────────┘

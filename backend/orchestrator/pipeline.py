@@ -48,19 +48,66 @@ def _emit(phase: str, message: str, data: dict = None, is_final: bool = False):
 
 # Nodes for Extraction Flow
 def node_extract(state: ClaimState) -> dict:
-    ext = state["filename"].split(".")[-1].lower() if state.get("filename") else ""
-    if ext in ["pdf", "docx", "doc", "txt"]:
-        text = extract_text(state["file_bytes"], state["filename"])
-    elif ext in ["jpg", "jpeg", "png", "webp"]:
-        text = extract_text_from_image(state["file_bytes"], state.get("content_type") or "image/jpeg")
-    else:
-        raise ValueError(f"Unsupported file type: {ext}")
-    return {"extracted_text": text}
+    start_time = time.time()
+    try:
+        ext = state["filename"].split(".")[-1].lower() if state.get("filename") else ""
+        if ext in ["pdf", "docx", "doc", "txt"]:
+            text = extract_text(state["file_bytes"], state["filename"])
+        elif ext in ["jpg", "jpeg", "png", "webp"]:
+            text = extract_text_from_image(state["file_bytes"], state.get("content_type") or "image/jpeg")
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
+        
+        trace = {
+            "agent": "Tier 1/2 Document Extractor",
+            "status": "SUCCESS",
+            "output": {"text_length": len(text), "type": ext},
+            "duration_ms": int((time.time() - start_time) * 1000)
+        }
+        return {"extracted_text": text, "trace_data": state.get("trace_data", []) + [trace]}
+    except Exception as e:
+        trace = {
+            "agent": "Tier 1/2 Document Extractor",
+            "status": "FAILED",
+            "error": str(e),
+            "duration_ms": int((time.time() - start_time) * 1000)
+        }
+        return {"error": str(e), "trace_data": state.get("trace_data", []) + [trace]}
+
+# Mapping from claim category → accepted document types from the verifier LLM
+_CATEGORY_TO_DOC_TYPES: dict[str, list[str]] = {
+    "CONSULTATION":          ["PRESCRIPTION"],
+    "DIAGNOSTIC":            ["DIAGNOSTIC_REPORT"],
+    "PHARMACY":              ["PHARMACY_BILL", "PRESCRIPTION"],
+    "DENTAL":                ["HOSPITAL_BILL"],
+    "VISION":                ["HOSPITAL_BILL", "PRESCRIPTION"],
+    "ALTERNATIVE_MEDICINE":  ["PRESCRIPTION", "HOSPITAL_BILL"],
+}
 
 def node_verify(state: ClaimState) -> dict:
+    start_time = time.time()
     text = state["extracted_text"]
     doc_verification = verify_document(text)
-    return {"extracted_fields": doc_verification.key_fields}
+    detected_type = doc_verification.document_type
+    selected_category = (state.get("claim_category") or "").upper()
+
+    # Category / document-type mismatch check
+    allowed_types = _CATEGORY_TO_DOC_TYPES.get(selected_category, [])
+    if allowed_types and detected_type not in allowed_types and detected_type != "UNKNOWN":
+        friendly_category = selected_category.replace("_", " ").title()
+        friendly_doc = detected_type.replace("_", " ").title()
+        raise ValueError(
+            f"CATEGORY_MISMATCH: You selected '{friendly_category}' but uploaded a '{friendly_doc}'. "
+            f"Please upload the correct document type for your chosen claim category."
+        )
+
+    trace = {
+        "agent": "Document Verifier (LLM)",
+        "status": "SUCCESS",
+        "output": doc_verification.model_dump(mode='json'),
+        "duration_ms": int((time.time() - start_time) * 1000)
+    }
+    return {"extracted_fields": doc_verification.key_fields, "trace_data": state.get("trace_data", []) + [trace]}
 
 # Build Extraction Graph
 extract_workflow = StateGraph(ClaimState)
@@ -108,6 +155,10 @@ async def extract_claim_stream(
                 yield _emit("verification", "Document verified.", {"key_fields": extracted_fields})
                 
             elif kind == "on_chain_end" and node == "LangGraph":
+                final_state = event["data"]["output"]
+                for t in final_state.get("trace_data", []):
+                    trace_builder.trace.append(TraceEntry(**t))
+                    
                 extracted_data = {
                     "text": extracted_text,
                     "extracted_fields": extracted_fields,
@@ -121,18 +172,42 @@ async def extract_claim_stream(
 
 # Nodes for Process Flow
 def node_validate(state: ClaimState) -> dict:
+    start_time = time.time()
     policy = get_policy()
     validator = MemberValidatorAgent(policy)
     claim = state["claim"]
     res = validator.validate(claim.member_id, claim.treatment_date, state.get("extracted_fields"))
+    
+    trace = {
+        "agent": "Member Policy Validator",
+        "status": "SUCCESS" if res.is_valid else "FAILED",
+        "output": res.model_dump(mode='json'),
+        "duration_ms": int((time.time() - start_time) * 1000)
+    }
+    
+    if not res.is_valid:
+        # Trace is appended even if we raise an error? Actually, wait, raising ValueError stops the graph.
+        # But let's return the trace_data so it's recorded if we catch it, or we just raise it.
+        # Langgraph won't save state updates if an exception is raised from the node.
+        # So we should probably handle it or just let the trace not be complete.
+        # Actually it's fine for now, we'll just raise it.
+        pass
+        
     if not res.is_valid:
         raise ValueError(f"Validation failed: {', '.join(res.reasons)}")
-    return {"validation_result": res.model_dump(mode='json')}
+    return {"validation_result": res.model_dump(mode='json'), "trace_data": state.get("trace_data", []) + [trace]}
 
 def node_decision(state: ClaimState) -> dict:
+    start_time = time.time()
     decision_agent = DecisionAgent()
     decision = decision_agent.evaluate_claim(state["claim"], state["extracted_text"], state.get("extracted_fields"))
-    return {"decision": decision}
+    trace = {
+        "agent": "Decision LLM Agent",
+        "status": "SUCCESS",
+        "output": {"decision": decision.decision.value, "reasons": decision.reasons, "approved_amount": decision.approved_amount},
+        "duration_ms": int((time.time() - start_time) * 1000)
+    }
+    return {"decision": decision, "trace_data": state.get("trace_data", []) + [trace]}
 
 def node_save(state: ClaimState) -> dict:
     decision = state["decision"]

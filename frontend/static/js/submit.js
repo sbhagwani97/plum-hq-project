@@ -111,15 +111,34 @@ document.addEventListener('DOMContentLoaded', () => {
     clearQuickReplies();
     
     if (state.step === 'ASK_MEMBER_ID') {
-      state.step = 'ASK_CATEGORY';
-      setTimeout(() => {
-        addMessage(`Thanks. What category is this claim for?`);
-        addQuickReplies(categories.map(c => ({ label: c.replace('_', ' '), value: c })), (val) => {
-          state.claim_category = val;
-          handleStepAdvance();
-        });
-        toggleInput(false); // Only quick replies for category
-      }, 500);
+      toggleInput(false);
+      const loadingBubble = addMessage(`Verifying member ID...`, 'bot');
+      
+      try {
+        const response = await fetch(`/api/policy/coverage/${state.member_id}`);
+        if (!response.ok) {
+          throw new Error("Not found");
+        }
+        const data = await response.json();
+        const memberName = data.name || state.member_id;
+        
+        loadingBubble.remove();
+        state.step = 'ASK_CATEGORY';
+        
+        setTimeout(() => {
+          addMessage(`Welcome back, ${memberName}! What category is this claim for?`);
+          addQuickReplies(categories.map(c => ({ label: c.replace('_', ' '), value: c })), (val) => {
+            state.claim_category = val;
+            handleStepAdvance();
+          });
+        }, 500);
+      } catch (err) {
+        loadingBubble.remove();
+        addMessage(`Sorry, I couldn't find a member with ID "${state.member_id}". Please try another one.`, 'bot');
+        state.member_id = null;
+        toggleInput(true);
+        chatInput.focus();
+      }
       
     } else if (state.step === 'ASK_CATEGORY') {
       state.step = 'ASK_DOCUMENT';
@@ -172,8 +191,17 @@ document.addEventListener('DOMContentLoaded', () => {
               const data = JSON.parse(dataStr);
               
               if (!data.is_final) {
-                if (lastBubble) { lastBubble.textContent = `⏳ ${data.message}`; }
-                else { lastBubble = addMessage(`⏳ ${data.message}`, 'bot'); }
+                if (data.data) {
+                  let info = "";
+                  try {
+                    info = JSON.stringify(data.data, null, 2);
+                  } catch(e) {}
+                  addMessage(`⏳ ${data.message}<br><pre style="font-size: 0.75rem; background: var(--bg-base); padding: 0.5rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-top: 0.5rem; white-space: pre-wrap;">${info}</pre>`, 'bot', true);
+                  lastBubble = null;
+                } else {
+                  if (lastBubble) { lastBubble.innerHTML = `⏳ ${data.message}`; }
+                  else { lastBubble = addMessage(`⏳ ${data.message}`, 'bot', true); }
+                }
               } else if (data.phase === 'complete') {
                 if (lastBubble) lastBubble.textContent = `✅ Document extracted!`;
                 
@@ -276,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
       member_id: state.member_id,
       claim_category: state.claim_category,
       treatment_date: date,
-      claimed_amount: parseFloat(amount),
+      claimed_amount: parseFloat(amount) || 0.0,
       hospital_name: hospital,
       extracted_text: state.extracted_text,
       extracted_fields: state.extracted_fields,
@@ -311,8 +339,17 @@ document.addEventListener('DOMContentLoaded', () => {
               const data = JSON.parse(dataStr);
               
               if (!data.is_final) {
-                if (lastBubble) { lastBubble.textContent = `⏳ ${data.message}`; }
-                else { lastBubble = addMessage(`⏳ ${data.message}`, 'bot'); }
+                if (data.data) {
+                  let info = "";
+                  try {
+                    info = JSON.stringify(data.data, null, 2);
+                  } catch(e) {}
+                  addMessage(`⏳ ${data.message}<br><pre style="font-size: 0.75rem; background: var(--bg-base); padding: 0.5rem; border-radius: var(--radius-sm); color: var(--text-muted); margin-top: 0.5rem; white-space: pre-wrap;">${info}</pre>`, 'bot', true);
+                  lastBubble = null;
+                } else {
+                  if (lastBubble) { lastBubble.innerHTML = `⏳ ${data.message}`; }
+                  else { lastBubble = addMessage(`⏳ ${data.message}`, 'bot', true); }
+                }
               } else {
                 if (data.phase === 'complete') {
                   const decision = data.data;

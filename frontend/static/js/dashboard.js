@@ -237,7 +237,7 @@ async function openTraceModal(claimId) {
       
       item.innerHTML = `
         <div style="position: absolute; left: -1.35rem; top: 0.25rem; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--accent-primary);"></div>
-        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">${step.agent_name} <span style="font-weight: 400; color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem;">${step.duration_ms}ms</span></div>
+        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">${step.agent} <span style="font-weight: 400; color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem;">${step.duration_ms}ms</span></div>
         <pre style="background: var(--bg-base); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--text-muted); overflow-x: auto; margin: 0; border: 1px solid var(--border-subtle);">${outJson}</pre>
       `;
       timeline.appendChild(item);

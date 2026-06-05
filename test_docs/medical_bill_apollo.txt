@@ -1,0 +1,29 @@
+┌─────────────────────────────────────────────────────┐
+│  Apollo Hospitals Enterprise Limited                │
+│  Bannerghatta Road, Bengaluru - 560076              │
+│  GSTIN: 29AABCA2252B1Z1                             │
+│  Ph: +91-80-12345678                                │
+├─────────────────────────────────────────────────────┤
+│  Bill No: BL-2024-08992    Date: 05-Nov-2024        │
+│  Patient: Suresh Patil     Age/Sex: 39/M            │
+│  IP No: IP10045            Admission: 01-Nov-2024   │
+├─────────────────────────────────────────────────────┤
+│  Description                         Amount (INR)   │
+│  ------------------------------------------------   │
+│  1. Room Rent (4 days @ 4500)            18,000.00  │
+│  2. Pharmacy & Consumables                4,550.00  │
+│  3. Laboratory Investigations             3,200.00  │
+│  4. Doctor Consultation Fees              2,500.00  │
+│  5. Nursing Charges                       1,200.00  │
+│  ------------------------------------------------   │
+│  Sub Total:                              29,450.00  │
+│  CGST (9%):                               2,650.50  │
+│  SGST (9%):                               2,650.50  │
+│  ------------------------------------------------   │
+│  Total Amount Payable:                   34,751.00  │
+├─────────────────────────────────────────────────────┤
+│  Amount in words: Thirty-Four Thousand Seven        │
+│  Hundred Fifty-One Rupees Only.                     │
+│                                                     │
+│                            [Authorized Signatory]   │
+└─────────────────────────────────────────────────────┘

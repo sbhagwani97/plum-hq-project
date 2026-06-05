@@ -46,10 +46,20 @@ class PolicyEngine:
         if claim.claimed_amount > limit and (cat_config.sub_limit == 0 or claim.claim_category.value == "CONSULTATION"):
             return self._reject(claim, f"PER_CLAIM_EXCEEDED: Claimed amount ({claim.claimed_amount}) exceeds per-claim limit of {self.policy.coverage.per_claim_limit}")
 
-        # Check Pre-Auth
+        # Check Pre-Auth (amount-based threshold)
         if cat_config.requires_pre_auth and cat_config.pre_auth_threshold:
             if claim.claimed_amount >= cat_config.pre_auth_threshold:
                 return self._reject(claim, "PRE_AUTH_MISSING: Pre-authorization required and missing for this amount. Please submit a pre-auth request.")
+
+        # Check high-value test pre-auth (test-name-based, e.g. MRI, CT Scan, PET Scan)
+        if cat_config.high_value_tests_requiring_pre_auth and extracted_text:
+            text_lower = extracted_text.lower()
+            for test_name in cat_config.high_value_tests_requiring_pre_auth:
+                if test_name.lower() in text_lower:
+                    return self._manual_review(
+                        claim,
+                        f"PRE_AUTH_REQUIRED: '{test_name}' is a high-value diagnostic test requiring pre-authorization. Please submit a pre-auth request before proceeding."
+                    )
 
         # Check hospital network
         is_network = self.policy.is_network_hospital(claim.hospital_name) if claim.hospital_name else False
@@ -100,6 +110,19 @@ class PolicyEngine:
             claim_category=claim.claim_category,
             claimed_amount=claim.claimed_amount,
             decision=DecisionEnum.REJECTED,
+            approved_amount=0.0,
+            confidence_score=1.0,
+            reasons=[reason],
+            adjustments=[]
+        )
+
+    def _manual_review(self, claim: ClaimSubmission, reason: str) -> ClaimDecision:
+        return ClaimDecision(
+            claim_id=claim.claim_id,
+            member_id=claim.member_id,
+            claim_category=claim.claim_category,
+            claimed_amount=claim.claimed_amount,
+            decision=DecisionEnum.MANUAL_REVIEW,
             approved_amount=0.0,
             confidence_score=1.0,
             reasons=[reason],

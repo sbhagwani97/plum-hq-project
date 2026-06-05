@@ -74,9 +74,36 @@
 
     </section>
 
+    <!-- ── Claims Table ──────────────────────────────────────────────────── -->
+    <section class="table-card" aria-label="Claims list">
+
+      <div class="table-card-header">
+        <span class="table-card-title">Recent Claims</span>
+        <span class="table-card-count" id="claims-count">Loading…</span>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="claims-table" id="claims-table">
+          <thead>
+            <tr>
+              <th>Claim ID</th>
+              <th>Member</th>
+              <th>Category</th>
+              <th style="text-align: right;">Amount (₹)</th>
+              <th>Decision / Status</th>
+              <th>Treatment Date</th>
+              <th>Submitted At</th>
+            </tr>
+          </thead>
+          <tbody id="claims-tbody">
+            <!-- Claims populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
     <!-- ── Test Section ──────────────────────────────────────────────────────── -->
-    <section class="test-section" aria-label="Testing Utilities" style="margin-bottom: 2rem; padding: 1.5rem; background: var(--bg-elevated); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-      <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">Test Utilities</h2>
+    <details class="test-section" aria-label="Testing Utilities" style="margin-bottom: 2rem; padding: 1.5rem; background: var(--bg-elevated); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+      <summary style="cursor: pointer; outline: none; font-size: 1.25rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Test Utilities</summary>
       
       <!-- ── Database Utilities ──────────────────────────────────────────────── -->
       <section class="table-card" aria-label="Database Utilities" style="margin-bottom: 2rem;">
@@ -123,35 +150,8 @@
           </div>
         </div>
       </section>
-    </section>
+    </details>
 
-    <!-- ── Claims Table ──────────────────────────────────────────────────── -->
-    <section class="table-card" aria-label="Claims list">
-
-      <div class="table-card-header">
-        <span class="table-card-title">Recent Claims</span>
-        <span class="table-card-count" id="claims-count">Loading…</span>
-      </div>
-
-      <div style="overflow-x: auto;">
-        <table class="claims-table" id="claims-table">
-          <thead>
-            <tr>
-              <th>Claim ID</th>
-              <th>Member</th>
-              <th>Category</th>
-              <th style="text-align: right;">Amount (₹)</th>
-              <th>Decision / Status</th>
-              <th>Treatment Date</th>
-              <th>Submitted At</th>
-            </tr>
-          </thead>
-          <tbody id="claims-tbody">
-            <!-- Claims populated by JS -->
-          </tbody>
-        </table>
-      </div>
-    </section>
   </main>
 
   <!-- Trace Modal -->
