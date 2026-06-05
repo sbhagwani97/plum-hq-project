@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     step: 'ASK_MEMBER_ID',
     member_id: null,
     claim_category: null,
-    file: null,
+    files: [],          // now an array of File objects
     extracted_text: null,
     extracted_fields: null,
     initial_trace: null,
@@ -82,9 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
   btnUpload.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0 && state.step === 'ASK_DOCUMENT') {
-      const file = e.target.files[0];
-      state.file = file;
-      addMessage(`📎 ${file.name}`, 'user');
+      state.files = Array.from(e.target.files);
+      const names = state.files.map(f => f.name).join(', ');
+      addMessage(`📎 ${names}`, 'user');
       handleStepAdvance();
     }
   });
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (state.step === 'ASK_CATEGORY') {
       state.step = 'ASK_DOCUMENT';
       setTimeout(() => {
-        addMessage(`Great! Please upload your medical document (invoice, bill, prescription).`);
+        addMessage(`Great! Please upload your medical document(s) (invoice, bill, prescription). You can select multiple files at once.`);
         toggleInput(false, true); // disable text, show upload
       }, 500);
       
@@ -158,9 +158,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const formData = new FormData();
     formData.append('member_id', state.member_id);
     formData.append('claim_category', state.claim_category);
-    formData.append('file', state.file);
+    // Append every file under the same field name "files" so FastAPI receives a list
+    state.files.forEach(f => formData.append('files', f));
     
-    addMessage(`Processing document...`, 'bot');
+    const label = state.files.length === 1
+      ? state.files[0].name
+      : `${state.files.length} documents`;
+    addMessage(`Processing ${label}...`, 'bot');
     
     try {
       const response = await fetch('/api/claims/extract', {

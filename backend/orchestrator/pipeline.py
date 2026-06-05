@@ -25,6 +25,9 @@ class ClaimState(TypedDict):
     claim_id: str
     member_id: str
     claim_category: str
+    # Multi-file support: each dict has file_bytes, filename, content_type
+    file_payloads: Optional[list]
+    # Legacy single-file fields kept for backward compat with process flow
     file_bytes: Optional[bytes]
     filename: Optional[str]
     content_type: Optional[str]
@@ -50,21 +53,45 @@ def _emit(phase: str, message: str, data: dict = None, is_final: bool = False):
 def node_extract(state: ClaimState) -> dict:
     start_time = time.time()
     try:
-        ext = state["filename"].split(".")[-1].lower() if state.get("filename") else ""
-        if ext in ["pdf", "docx", "doc", "txt"]:
-            text = extract_text(state["file_bytes"], state["filename"])
-        elif ext in ["jpg", "jpeg", "png", "webp"]:
-            text = extract_text_from_image(state["file_bytes"], state.get("content_type") or "image/jpeg")
-        else:
-            raise ValueError(f"Unsupported file type: {ext}")
-        
+        payloads = state.get("file_payloads") or []
+
+        # Fallback: legacy single-file fields
+        if not payloads and state.get("filename"):
+            payloads = [{
+                "file_bytes": state["file_bytes"],
+                "filename": state["filename"],
+                "content_type": state.get("content_type"),
+            }]
+
+        if not payloads:
+            raise ValueError("No files provided for extraction.")
+
+        parts = []
+        for idx, payload in enumerate(payloads, start=1):
+            fname = payload.get("filename") or f"document_{idx}"
+            ext = fname.split(".")[-1].lower() if "." in fname else ""
+            fbytes = payload["file_bytes"]
+            ctype = payload.get("content_type") or ""
+
+            if ext in ["pdf", "docx", "doc", "txt"]:
+                text = extract_text(fbytes, fname)
+            elif ext in ["jpg", "jpeg", "png", "webp"]:
+                text = extract_text_from_image(fbytes, ctype or "image/jpeg")
+            else:
+                raise ValueError(f"Unsupported file type: {ext} (file: {fname})")
+
+            header = f"--- Document {idx}: {fname} ---"
+            parts.append(f"{header}\n{text}")
+
+        combined_text = "\n\n".join(parts)
+
         trace = {
             "agent": "Tier 1/2 Document Extractor",
             "status": "SUCCESS",
-            "output": {"text_length": len(text), "type": ext},
+            "output": {"text_length": len(combined_text), "num_files": len(payloads)},
             "duration_ms": int((time.time() - start_time) * 1000)
         }
-        return {"extracted_text": text, "trace_data": state.get("trace_data", []) + [trace]}
+        return {"extracted_text": combined_text, "trace_data": state.get("trace_data", []) + [trace]}
     except Exception as e:
         trace = {
             "agent": "Tier 1/2 Document Extractor",
@@ -74,10 +101,12 @@ def node_extract(state: ClaimState) -> dict:
         }
         return {"error": str(e), "trace_data": state.get("trace_data", []) + [trace]}
 
-# Mapping from claim category → accepted document types from the verifier LLM
+# Mapping from claim category → accepted document types from the verifier LLM.
+# HOSPITAL_BILL is accepted for CONSULTATION and DIAGNOSTIC because discharge
+# summaries are classified as HOSPITAL_BILL and are commonly submitted for both.
 _CATEGORY_TO_DOC_TYPES: dict[str, list[str]] = {
-    "CONSULTATION":          ["PRESCRIPTION"],
-    "DIAGNOSTIC":            ["DIAGNOSTIC_REPORT"],
+    "CONSULTATION":          ["PRESCRIPTION", "HOSPITAL_BILL"],
+    "DIAGNOSTIC":            ["DIAGNOSTIC_REPORT", "HOSPITAL_BILL"],
     "PHARMACY":              ["PHARMACY_BILL", "PRESCRIPTION"],
     "DENTAL":                ["HOSPITAL_BILL"],
     "VISION":                ["HOSPITAL_BILL", "PRESCRIPTION"],
@@ -101,13 +130,19 @@ def node_verify(state: ClaimState) -> dict:
             f"Please upload the correct document type for your chosen claim category."
         )
 
+    # Determine trace status — degrade if the verifier flagged quality issues
+    trace_status = "DEGRADED" if doc_verification.flags else "SUCCESS"
+
     trace = {
         "agent": "Document Verifier (LLM)",
-        "status": "SUCCESS",
+        "status": trace_status,
         "output": doc_verification.model_dump(mode='json'),
         "duration_ms": int((time.time() - start_time) * 1000)
     }
-    return {"extracted_fields": doc_verification.key_fields, "trace_data": state.get("trace_data", []) + [trace]}
+    return {
+        "extracted_fields": doc_verification.key_fields,
+        "trace_data": state.get("trace_data", []) + [trace],
+    }
 
 # Build Extraction Graph
 extract_workflow = StateGraph(ClaimState)
@@ -119,16 +154,20 @@ extract_workflow.add_edge("verify", END)
 extract_app = extract_workflow.compile()
 
 async def extract_claim_stream(
-    claim_id: str, member_id: str, claim_category: str, file_bytes: bytes, filename: str, content_type: str
+    claim_id: str,
+    member_id: str,
+    claim_category: str,
+    file_payloads: list,
 ) -> AsyncGenerator[str, None]:
     trace_builder = TraceBuilder(claim_id)
+    filenames = [p.get("filename", "document") for p in file_payloads]
+    label = ", ".join(filenames) if len(filenames) <= 3 else f"{len(filenames)} documents"
+
     initial_state = {
         "claim_id": claim_id,
         "member_id": member_id,
         "claim_category": claim_category,
-        "file_bytes": file_bytes,
-        "filename": filename,
-        "content_type": content_type,
+        "file_payloads": file_payloads,
         "trace_data": []
     }
     
@@ -137,7 +176,7 @@ async def extract_claim_stream(
     
     try:
         # We manually emit the SSE while iterating over LangGraph events
-        yield _emit("extraction", f"Extracting text from {filename}...")
+        yield _emit("extraction", f"Extracting text from {label}...")
         
         async for event in extract_app.astream_events(initial_state, version="v2"):
             kind = event["event"]
@@ -145,14 +184,26 @@ async def extract_claim_stream(
             
             if kind == "on_chain_end" and node == "extract":
                 extracted_text = event["data"]["output"].get("extracted_text", "")
-                yield _emit("extraction", "Text extraction complete.", {"preview": extracted_text[:100] + "..."})
+                yield _emit("extraction", f"Text extraction complete ({len(file_payloads)} file(s)).", {"preview": extracted_text[:100] + "..."})
                 
             elif kind == "on_chain_start" and node == "verify":
                 yield _emit("verification", "Verifying document type and extracting key fields...")
                 
             elif kind == "on_chain_end" and node == "verify":
                 extracted_fields = event["data"]["output"].get("extracted_fields", {})
-                yield _emit("verification", "Document verified.", {"key_fields": extracted_fields})
+                # Pull quality metadata from the trace entry for the frontend
+                trace_entries = event["data"]["output"].get("trace_data", [])
+                verifier_trace = next(
+                    (t for t in reversed(trace_entries) if t.get("agent") == "Document Verifier (LLM)"),
+                    {}
+                )
+                verifier_output = verifier_trace.get("output", {})
+                yield _emit("verification", "Document verified.", {
+                    "key_fields": extracted_fields,
+                    "confidence": verifier_output.get("confidence", 1.0),
+                    "flags": verifier_output.get("flags", []),
+                    "warnings": verifier_output.get("warnings", []),
+                })
                 
             elif kind == "on_chain_end" and node == "LangGraph":
                 final_state = event["data"]["output"]

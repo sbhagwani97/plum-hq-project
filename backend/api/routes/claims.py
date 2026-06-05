@@ -84,28 +84,37 @@ async def get_claim_trace(claim_id: str, db: Session = Depends(get_db)) -> dict[
 
 from backend.orchestrator.pipeline import extract_claim_stream, process_claim_stream
 from backend.models.claim import ClaimCategory
+from typing import List
 import uuid
 
 @router.post("/claims/extract")
 async def extract_claim(
     member_id: str = Form(...),
     claim_category: str = Form(...),
-    file: UploadFile = File(...)
+    files: List[UploadFile] = File(...)
 ):
     """
-    Step 1: Parse the document and return extracted details for review.
+    Step 1: Parse the documents and return extracted details for review.
+    Accepts one or more uploaded files; text from all of them is merged
+    before being passed through the verification pipeline.
     """
     claim_id = f"CLM_{uuid.uuid4().hex[:8].upper()}"
-    file_bytes = await file.read()
-    
+
+    # Read every uploaded file into memory
+    file_payloads = []
+    for f in files:
+        file_payloads.append({
+            "file_bytes": await f.read(),
+            "filename": f.filename,
+            "content_type": f.content_type,
+        })
+
     return StreamingResponse(
         extract_claim_stream(
             claim_id=claim_id,
             member_id=member_id,
             claim_category=claim_category,
-            file_bytes=file_bytes,
-            filename=file.filename,
-            content_type=file.content_type
+            file_payloads=file_payloads,
         ),
         media_type="text/event-stream"
     )
