@@ -29,6 +29,50 @@ app = FastAPI(
     redoc_url="/api/redoc",
 )
 
+import logging
+import time
+import json
+from starlette.middleware.base import BaseHTTPMiddleware
+
+logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+class StructuredLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        
+        logging.info(json.dumps({
+            "event": "request_started",
+            "method": request.method,
+            "url": str(request.url),
+            "client": request.client.host if request.client else None
+        }))
+        
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+        except Exception as e:
+            status_code = 500
+            logging.error(json.dumps({
+                "event": "request_failed",
+                "method": request.method,
+                "url": str(request.url),
+                "error": str(e)
+            }))
+            raise e
+        finally:
+            process_time = time.time() - start_time
+            logging.info(json.dumps({
+                "event": "request_finished",
+                "method": request.method,
+                "url": str(request.url),
+                "status_code": status_code,
+                "duration_ms": round(process_time * 1000, 2)
+            }))
+        
+        return response
+
+app.add_middleware(StructuredLoggingMiddleware)
+
 # ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,

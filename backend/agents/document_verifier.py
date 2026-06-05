@@ -19,8 +19,8 @@ class DocumentVerificationResult(BaseModel):
     key_fields: dict[str, str]
 
 def verify_document(text: str) -> DocumentVerificationResult:
-    # Qwen model requested by user
-    model_name = "Qwen/Qwen3.5-9B"
+    # Gemma model requested by user
+    model_name = "google/gemma-3n-E4B-it"
     
     prompt = f"""
 You are a medical document verifier. Given the following extracted text from a document, classify it into one of these types:

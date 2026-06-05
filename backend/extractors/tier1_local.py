@@ -1,31 +1,37 @@
 """
 backend/extractors/tier1_local.py
-Local text extraction for PDFs and DOCX files.
+Local text extraction using LangChain Document Loaders.
 """
 from __future__ import annotations
-import fitz  # PyMuPDF
-from io import BytesIO
-import docx
-
-def extract_text_from_pdf(file_bytes: bytes) -> str:
-    text = ""
-    with fitz.open(stream=file_bytes, filetype="pdf") as doc:
-        for page in doc:
-            text += page.get_text() + "\n"
-    return text.strip()
-
-def extract_text_from_docx(file_bytes: bytes) -> str:
-    doc = docx.Document(BytesIO(file_bytes))
-    text = "\n".join([para.text for para in doc.paragraphs])
-    return text.strip()
+import tempfile
+import os
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 
 def extract_text(file_bytes: bytes, filename: str) -> str:
     ext = filename.split(".")[-1].lower()
-    if ext == "pdf":
-        return extract_text_from_pdf(file_bytes)
-    elif ext in ("docx", "doc"):
-        return extract_text_from_docx(file_bytes)
-    elif ext == "txt":
-        return file_bytes.decode("utf-8", errors="ignore")
-    else:
-        raise ValueError(f"Unsupported local text extraction format: {ext}")
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
+        
+    try:
+        if ext == "pdf":
+            loader = PyPDFLoader(tmp_path)
+        elif ext in ("docx", "doc"):
+            loader = Docx2txtLoader(tmp_path)
+        elif ext == "txt":
+            # using utf-8 with fallback
+            loader = TextLoader(tmp_path, encoding="utf-8")
+        else:
+            raise ValueError(f"Unsupported local text extraction format: {ext}")
+            
+        pages = loader.load()
+        text = "\n".join([page.page_content for page in pages])
+        return text.strip()
+    except Exception as e:
+        # Fallback if TextLoader fails due to encoding
+        if ext == "txt":
+            return file_bytes.decode("utf-8", errors="ignore").strip()
+        raise e
+    finally:
+        os.remove(tmp_path)
