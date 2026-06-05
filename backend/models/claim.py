@@ -66,6 +66,8 @@ class ClaimSubmission(BaseModel):
     treatment_date: str  # ISO 8601 date string: YYYY-MM-DD
     hospital_name: Optional[str] = None
     diagnosis: Optional[str] = None
+    ytd_claims_amount: float = 0.0
+    claims_history: list[dict] = Field(default_factory=list)
     documents: list[DocumentInput] = Field(default_factory=list)
     submitted_at: datetime = Field(default_factory=datetime.utcnow)
 

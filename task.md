@@ -20,18 +20,18 @@
   - `[x]` Implement Tier 2 Document Extractor (Together AI vision parsing for scans/images)
   - `[x]` Expose temporary verification endpoint `POST /claims/verify-docs`
   - `[x]` Build interactive Document Upload & Verification screen with color-coded confidence metrics
-- `[ ]` Phase 4: Claims Orchestration, DB Persistence & End-to-End Decisioning
-  - `[ ]` Implement core `ClaimOrchestrator` (`backend/orchestrator/pipeline.py`) with `agent_guard`
-  - `[ ]` Implement Decision Agent (`backend/agents/decision_agent.py`) combining deterministic policy engine and fuzzy LLM exclusion matching
-  - `[ ]` Set up SQLite Database models and repository CRUD operations via SQLAlchemy
-  - `[ ]` Expose end-to-end `POST /claims/submit` and `GET /claims/{claim_id}` endpoints
-  - `[ ]` Connect multi-step claim submission form and complete Decision Review screen
-- `[ ]` Phase 5: Trace Builder & Observability Timeline
-  - `[ ]` Complete Trace Builder (`backend/tracing/trace_builder.py`) and persist `ClaimTrace` JSON in DB
-  - `[ ]` Expose endpoint `GET /claims/{claim_id}/trace`
-  - `[ ]` Build accordion visual Audit Trace Timeline showing step-by-step agent logs and latencies
-- `[ ]` Phase 6: Automated Evaluation & Polish
-  - `[ ]` Write complete integration test cases
-  - `[ ]` Implement evaluation runner script (`backend/eval/run_eval.py`) to execute all 12 test cases
-  - `[ ]` Generate evaluation report `eval_report.md`
-  - `[ ]` Perform final UI polish, transition styling, and compile architecture documentation
+- `[x]` Phase 4: Claims Orchestration, DB Persistence & End-to-End Decisioning
+  - `[x]` Implement core `ClaimOrchestrator` (`backend/orchestrator/pipeline.py`) with `agent_guard`
+  - `[x]` Implement Decision Agent (`backend/agents/decision_agent.py`) combining deterministic policy engine and fuzzy LLM exclusion matching
+  - `[x]` Set up SQLite Database models and repository CRUD operations via SQLAlchemy
+  - `[x]` Expose end-to-end `POST /claims/submit` and `GET /claims/{claim_id}` endpoints
+  - `[x]` Connect multi-step claim submission form and complete Decision Review screen
+- `[x]` Phase 5: Trace Builder & Observability Timeline
+  - `[x]` Complete Trace Builder (`backend/tracing/trace_builder.py`) and persist `ClaimTrace` JSON in DB
+  - `[x]` Expose endpoint `GET /claims/{claim_id}/trace`
+  - `[x]` Build accordion visual Audit Trace Timeline showing step-by-step agent logs and latencies
+- `[x]` Phase 6: Automated Evaluation & Polish
+  - `[x]` Write complete integration test cases
+  - `[x]` Implement evaluation runner script (`backend/eval/run_eval.py`) to execute all 12 test cases
+  - `[x]` Generate evaluation report `eval_report.md`
+  - `[x]` Perform final UI polish, transition styling, and compile architecture documentation

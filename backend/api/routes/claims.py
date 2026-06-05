@@ -19,121 +19,6 @@ from backend.models.claim import (
 
 router = APIRouter()
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-MEMBER_NAMES: dict[str, str] = {
-    "EMP001": "Rajesh Kumar",
-    "EMP002": "Priya Singh",
-    "EMP003": "Amit Verma",
-    "EMP004": "Sneha Reddy",
-    "EMP005": "Vikram Joshi",
-    "EMP006": "Kavita Nair",
-    "EMP007": "Suresh Patil",
-    "EMP008": "Ravi Menon",
-    "EMP009": "Anita Desai",
-    "EMP010": "Deepak Shah",
-}
-
-_MOCK_CLAIMS: list[dict[str, Any]] = [
-    {
-        "claim_id": "CLM_A1B2C3D4",
-        "member_id": "EMP001",
-        "member_name": "Rajesh Kumar",
-        "claim_category": ClaimCategory.CONSULTATION,
-        "claimed_amount": 1500.0,
-        "approved_amount": 1350.0,
-        "decision": DecisionEnum.APPROVED,
-        "status": ClaimStatus.COMPLETED,
-        "treatment_date": "2024-10-15",
-        "submitted_at": datetime(2024, 10, 20, 9, 30),
-    },
-    {
-        "claim_id": "CLM_E5F6G7H8",
-        "member_id": "EMP002",
-        "member_name": "Priya Singh",
-        "claim_category": ClaimCategory.PHARMACY,
-        "claimed_amount": 2800.0,
-        "approved_amount": 2800.0,
-        "decision": DecisionEnum.APPROVED,
-        "status": ClaimStatus.COMPLETED,
-        "treatment_date": "2024-10-18",
-        "submitted_at": datetime(2024, 10, 22, 11, 15),
-    },
-    {
-        "claim_id": "CLM_I9J0K1L2",
-        "member_id": "EMP003",
-        "member_name": "Amit Verma",
-        "claim_category": ClaimCategory.DIAGNOSTIC,
-        "claimed_amount": 12000.0,
-        "approved_amount": 6000.0,
-        "decision": DecisionEnum.PARTIAL,
-        "status": ClaimStatus.COMPLETED,
-        "treatment_date": "2024-10-10",
-        "submitted_at": datetime(2024, 10, 14, 14, 0),
-    },
-    {
-        "claim_id": "CLM_M3N4O5P6",
-        "member_id": "EMP004",
-        "member_name": "Sneha Reddy",
-        "claim_category": ClaimCategory.DENTAL,
-        "claimed_amount": 8500.0,
-        "approved_amount": 0.0,
-        "decision": DecisionEnum.REJECTED,
-        "status": ClaimStatus.COMPLETED,
-        "treatment_date": "2024-10-05",
-        "submitted_at": datetime(2024, 10, 8, 10, 45),
-    },
-    {
-        "claim_id": "CLM_Q7R8S9T0",
-        "member_id": "EMP005",
-        "member_name": "Vikram Joshi",
-        "claim_category": ClaimCategory.CONSULTATION,
-        "claimed_amount": 3500.0,
-        "approved_amount": None,
-        "decision": DecisionEnum.MANUAL_REVIEW,
-        "status": ClaimStatus.COMPLETED,
-        "treatment_date": "2024-10-25",
-        "submitted_at": datetime(2024, 10, 28, 16, 30),
-    },
-    {
-        "claim_id": "CLM_U1V2W3X4",
-        "member_id": "EMP006",
-        "member_name": "Kavita Nair",
-        "claim_category": ClaimCategory.VISION,
-        "claimed_amount": 4200.0,
-        "approved_amount": None,
-        "decision": None,
-        "status": ClaimStatus.PROCESSING,
-        "treatment_date": "2024-10-29",
-        "submitted_at": datetime(2024, 11, 1, 8, 0),
-    },
-    {
-        "claim_id": "CLM_Y5Z6A7B8",
-        "member_id": "EMP007",
-        "member_name": "Suresh Patil",
-        "claim_category": ClaimCategory.ALTERNATIVE_MEDICINE,
-        "claimed_amount": 6000.0,
-        "approved_amount": 6000.0,
-        "decision": DecisionEnum.APPROVED,
-        "status": ClaimStatus.COMPLETED,
-        "treatment_date": "2024-09-20",
-        "submitted_at": datetime(2024, 9, 25, 12, 0),
-    },
-    {
-        "claim_id": "CLM_C9D0E1F2",
-        "member_id": "EMP008",
-        "member_name": "Ravi Menon",
-        "claim_category": ClaimCategory.PHARMACY,
-        "claimed_amount": 950.0,
-        "approved_amount": None,
-        "decision": None,
-        "status": ClaimStatus.PENDING,
-        "treatment_date": "2024-11-01",
-        "submitted_at": datetime(2024, 11, 1, 17, 55),
-    },
-]
-
-
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/health")
@@ -142,12 +27,125 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "version": "0.1.0", "service": "Plum HQ Claims API"}
 
 
-@router.get("/claims/mock", response_model=list[ClaimSummary])
-async def get_mock_claims() -> list[dict[str, Any]]:
+from fastapi import File, UploadFile, Form, HTTPException
+from fastapi.responses import StreamingResponse
+from backend.db.database import get_db
+from sqlalchemy.orm import Session
+from backend.db.models import ClaimRecord
+from fastapi import Depends
+from backend.models.claim import ClaimCategory, ClaimSubmission, ClaimTrace
+
+@router.get("/claims", response_model=list[dict[str, Any]])
+async def get_claims(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
     """
-    Returns mock claim records for Phase 1 dashboard display.
+    Returns claim records from the database.
     """
-    return _MOCK_CLAIMS
+    records = db.query(ClaimRecord).order_by(ClaimRecord.submitted_at.desc()).all()
+    from backend.policy.loader import get_policy
+    policy = get_policy()
+    
+    results = []
+    for r in records:
+        member = policy.get_member(r.member_id)
+        name = member.name if member else "Unknown"
+        results.append({
+            "claim_id": r.claim_id,
+            "member_id": r.member_id,
+            "member_name": name,
+            "claim_category": r.claim_category,
+            "claimed_amount": r.claimed_amount,
+            "approved_amount": r.approved_amount,
+            "decision": r.decision,
+            "status": r.status,
+            "treatment_date": r.treatment_date,
+            "submitted_at": r.submitted_at,
+            "reasons": r.reasons
+        })
+    return results
+
+@router.post("/claims/clear")
+async def clear_claims(db: Session = Depends(get_db)):
+    """Clears all claim records from the database for demo reset purposes."""
+    deleted_count = db.query(ClaimRecord).delete()
+    db.commit()
+    return {"status": "success", "deleted_count": deleted_count}
+
+@router.get("/claims/{claim_id}/trace")
+async def get_claim_trace(claim_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """
+    Returns the complete trace for a claim.
+    """
+    record = db.query(ClaimRecord).filter(ClaimRecord.claim_id == claim_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    if not record.trace:
+        raise HTTPException(status_code=404, detail="Trace not found for this claim")
+    return record.trace
+
+from backend.orchestrator.pipeline import extract_claim_stream, process_claim_stream
+from backend.models.claim import ClaimCategory
+import uuid
+
+@router.post("/claims/extract")
+async def extract_claim(
+    member_id: str = Form(...),
+    claim_category: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Step 1: Parse the document and return extracted details for review.
+    """
+    claim_id = f"CLM_{uuid.uuid4().hex[:8].upper()}"
+    file_bytes = await file.read()
+    
+    return StreamingResponse(
+        extract_claim_stream(
+            claim_id=claim_id,
+            member_id=member_id,
+            claim_category=claim_category,
+            file_bytes=file_bytes,
+            filename=file.filename,
+            content_type=file.content_type
+        ),
+        media_type="text/event-stream"
+    )
+
+from pydantic import BaseModel
+class ProcessClaimRequest(BaseModel):
+    claim_id: str
+    member_id: str
+    claim_category: str
+    treatment_date: str
+    claimed_amount: float
+    hospital_name: str | None = None
+    extracted_text: str
+    extracted_fields: dict = {}
+    initial_trace: dict
+
+@router.post("/claims/process")
+async def process_claim(req: ProcessClaimRequest):
+    """
+    Step 2: Take the reviewed details and finalise the claim decision.
+    """
+    claim = ClaimSubmission(
+        claim_id=req.claim_id,
+        member_id=req.member_id,
+        claim_category=ClaimCategory(req.claim_category),
+        treatment_date=req.treatment_date,
+        claimed_amount=req.claimed_amount,
+        hospital_name=req.hospital_name,
+        documents=[] # We aren't re-processing documents
+    )
+    
+    return StreamingResponse(
+        process_claim_stream(
+            claim=claim,
+            extracted_text=req.extracted_text,
+            extracted_fields=req.extracted_fields,
+            initial_trace_data=req.initial_trace
+        ),
+        media_type="text/event-stream"
+    )
 
 
 from fastapi import File, UploadFile

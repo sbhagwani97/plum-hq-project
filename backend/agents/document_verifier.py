@@ -18,9 +18,19 @@ class DocumentVerificationResult(BaseModel):
     document_type: str
     key_fields: dict[str, str]
 
+from langchain_openai import ChatOpenAI
+
 def verify_document(text: str) -> DocumentVerificationResult:
-    # Gemma model requested by user
     model_name = "google/gemma-3n-E4B-it"
+    llm = ChatOpenAI(
+        model=model_name, 
+        base_url="https://api.together.xyz/v1", 
+        api_key=TOGETHER_API_KEY, 
+        temperature=0.1,
+        max_tokens=500
+    )
+    
+    structured_llm = llm.with_structured_output(DocumentVerificationResult)
     
     prompt = f"""
 You are a medical document verifier. Given the following extracted text from a document, classify it into one of these types:
@@ -32,41 +42,23 @@ You are a medical document verifier. Given the following extracted text from a d
 
 Also, extract key fields if present (e.g., Patient Name, Date, Total Amount, Doctor Name).
 
-Return ONLY a valid JSON object in the exact following structure:
-{{
-  "document_type": "PRESCRIPTION",
-  "key_fields": {{
-    "Patient Name": "Rajesh Kumar",
-    "Doctor Name": "Dr. Arun Sharma",
-    "Date": "01-Nov-2024"
-  }}
-}}
-
 Text to analyze:
-{text[:3000]}
+{text}
 """
-
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": "You are a strict JSON outputting bot."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.1,
-        max_tokens=500
-    )
-    
     try:
-        content = response.choices[0].message.content.strip()
-        if content.startswith("```json"):
-            content = content[7:-3]
-        elif content.startswith("```"):
-            content = content[3:-3]
-            
-        data = json.loads(content.strip())
-        return DocumentVerificationResult(**data)
+        return structured_llm.invoke(prompt)
     except Exception as e:
         return DocumentVerificationResult(
             document_type="UNKNOWN",
-            key_fields={"error": str(e), "raw": response.choices[0].message.content}
+            key_fields={"error": str(e)}
         )
+
+from langchain_core.tools import tool
+
+@tool
+def verify_document_tool(text: str) -> str:
+    """Verifies the document type and extracts key fields from the raw text.
+    Use this tool after extracting text to ensure it's the correct document type.
+    """
+    res = verify_document(text)
+    return res.model_dump_json()

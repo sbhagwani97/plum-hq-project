@@ -20,7 +20,7 @@ class MemberValidatorAgent:
     def __init__(self, policy: PolicyConfig = None):
         self.policy = policy or get_policy()
 
-    def validate(self, member_id: str, treatment_date_str: Optional[str] = None) -> MemberValidationResult:
+    def validate(self, member_id: str, treatment_date_str: Optional[str] = None, extracted_fields: dict = None) -> MemberValidationResult:
         reasons = []
         member = self.policy.get_member(member_id)
         
@@ -31,6 +31,25 @@ class MemberValidatorAgent:
                 reasons=["Member ID not found in policy"]
             )
             
+        # Name Matching Check
+        if extracted_fields:
+            doc_name = extracted_fields.get("Patient Name") or extracted_fields.get("Patient") or extracted_fields.get("Name")
+            if doc_name and member.name:
+                # Basic normalization for matching (e.g. "Rajesh Kumar" vs "Kumar, Rajesh")
+                def normalize(n):
+                    return ''.join(c.lower() for c in n if c.isalnum())
+                
+                # Check if at least one word from the member name is in the doc name
+                member_parts = [p.lower() for p in member.name.split()]
+                doc_name_lower = doc_name.lower()
+                
+                # Simple heuristic: if none of the parts of the true member name are found in the doc name, flag it
+                match_found = any(part in doc_name_lower for part in member_parts if len(part) > 2)
+                
+                # If it's a completely different name (e.g. member is "Rajesh Kumar", doc says "Amit Singh")
+                if not match_found:
+                    reasons.append(f"Name mismatch: Document is for '{doc_name}' but policy is for '{member.name}'")
+
         if treatment_date_str:
             try:
                 treatment_date = datetime.strptime(treatment_date_str, "%Y-%m-%d").date()
@@ -64,3 +83,19 @@ class MemberValidatorAgent:
             is_active=is_valid,
             reasons=reasons
         )
+
+from langchain_core.tools import tool
+
+@tool
+def validate_member(member_id: str, treatment_date_str: str = None, extracted_fields_json: str = None) -> str:
+    """Validates if a member is eligible for a claim based on policy rules.
+    Args:
+        member_id: The member's ID.
+        treatment_date_str: Optional treatment date (YYYY-MM-DD).
+        extracted_fields_json: Optional JSON string of extracted fields from the document.
+    """
+    import json
+    extracted_fields = json.loads(extracted_fields_json) if extracted_fields_json else None
+    validator = MemberValidatorAgent()
+    result = validator.validate(member_id, treatment_date_str, extracted_fields)
+    return result.model_dump_json()

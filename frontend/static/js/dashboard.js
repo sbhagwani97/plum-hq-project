@@ -1,6 +1,6 @@
 /**
  * dashboard.js
- * Phase 1: Fetches mock claims from /api/claims/mock and renders the dashboard.
+ * Fetches claims from /api/claims and renders the dashboard.
  */
 
 const API_BASE = '';  // same origin
@@ -90,7 +90,11 @@ function buildRow(claim) {
   const displayDecision = decisionLabel(claim.decision, claim.status);
   const badgeClass = `badge-${displayDecision.toLowerCase()}`;
 
+  const fragment = document.createDocumentFragment();
+
+  // Main Row
   const tr = document.createElement('tr');
+  tr.style.cursor = 'pointer';
   tr.innerHTML = `
     <td><span class="claim-id">${claim.claim_id}</span></td>
     <td>
@@ -113,7 +117,56 @@ function buildRow(claim) {
     <td>${formatDate(claim.treatment_date)}</td>
     <td>${formatDate(claim.submitted_at)}</td>
   `;
-  return tr;
+
+  // Expanded Row
+  const expandTr = document.createElement('tr');
+  expandTr.style.display = 'none';
+  expandTr.style.backgroundColor = 'var(--bg-base)';
+  
+  let reasonsHtml = '<em>No reasons provided.</em>';
+  if (claim.reasons && claim.reasons.length > 0) {
+    reasonsHtml = `<ul style="margin: 0; padding-left: 1.5rem; color: var(--text-primary); font-size: 0.9rem;">
+      ${claim.reasons.map(r => `<li style="margin-bottom: 0.25rem;">${r}</li>`).join('')}
+    </ul>`;
+  }
+  
+  expandTr.innerHTML = `
+    <td colspan="7" style="padding: 1.5rem;">
+      <div style="display: flex; gap: 2rem;">
+        <div style="flex: 1;">
+          <h4 style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase;">Decision Reasoning</h4>
+          ${reasonsHtml}
+        </div>
+        <div>
+          <button class="btn-trace" style="padding: 0.5rem 1rem; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; font-size: 0.85rem;">View Full Trace</button>
+        </div>
+      </div>
+    </td>
+  `;
+
+  // Toggle Logic
+  tr.addEventListener('click', () => {
+    if (expandTr.style.display === 'none') {
+      expandTr.style.display = 'table-row';
+      tr.style.backgroundColor = 'var(--bg-base)';
+    } else {
+      expandTr.style.display = 'none';
+      tr.style.backgroundColor = '';
+    }
+  });
+
+  // Wiring up Trace Modal button (placeholder for now)
+  const traceBtn = expandTr.querySelector('.btn-trace');
+  if (traceBtn) {
+    traceBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTraceModal(claim.claim_id);
+    });
+  }
+
+  fragment.appendChild(tr);
+  fragment.appendChild(expandTr);
+  return fragment;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -140,6 +193,70 @@ function renderClaims(claims) {
   if (countEl) countEl.textContent = `${claims.length} claims`;
 }
 
+// ── Trace Modal Logic ─────────────────────────────────────────────────────────
+
+async function openTraceModal(claimId) {
+  const modal = document.getElementById('trace-modal');
+  const timeline = document.getElementById('trace-timeline');
+  const claimIdSpan = document.getElementById('trace-claim-id');
+  
+  if (!modal || !timeline) return;
+  
+  modal.style.display = 'flex';
+  claimIdSpan.textContent = claimId;
+  timeline.innerHTML = '<span class="spinner"></span> Loading trace...';
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/claims/${claimId}/trace`);
+    if (!res.ok) throw new Error('Failed to load trace');
+    
+    const traceData = await res.json();
+    timeline.innerHTML = '';
+    
+    // Check if trace has agents
+    if (!traceData.agents || traceData.agents.length === 0) {
+      timeline.innerHTML = '<div style="padding: 1rem; color: var(--text-muted);">No trace found for this claim.</div>';
+      return;
+    }
+    
+    for (const step of traceData.agents) {
+      const item = document.createElement('div');
+      item.style.marginBottom = '1.5rem';
+      item.style.position = 'relative';
+      
+      let outJson = '';
+      try {
+        if (typeof step.output === 'object') {
+          outJson = JSON.stringify(step.output, null, 2);
+        } else if (typeof step.output === 'string') {
+          outJson = JSON.stringify(JSON.parse(step.output), null, 2);
+        } else {
+          outJson = String(step.output);
+        }
+      } catch (e) { outJson = step.output; }
+      
+      item.innerHTML = `
+        <div style="position: absolute; left: -1.35rem; top: 0.25rem; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--accent-primary);"></div>
+        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">${step.agent_name} <span style="font-weight: 400; color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem;">${step.duration_ms}ms</span></div>
+        <pre style="background: var(--bg-base); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--text-muted); overflow-x: auto; margin: 0; border: 1px solid var(--border-subtle);">${outJson}</pre>
+      `;
+      timeline.appendChild(item);
+    }
+    
+  } catch (err) {
+    timeline.innerHTML = `<span style="color: var(--status-rejected);">⚠️ ${err.message}</span>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const closeBtn = document.getElementById('close-modal');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      document.getElementById('trace-modal').style.display = 'none';
+    });
+  }
+});
+
 function showLoading() {
   const tbody = document.getElementById('claims-tbody');
   if (tbody) {
@@ -165,7 +282,7 @@ function showError(message) {
 async function loadClaims() {
   showLoading();
   try {
-    const res = await fetch(`${API_BASE}/api/claims/mock`);
+    const res = await fetch(`${API_BASE}/api/claims`);
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const claims = await res.json();
 
@@ -316,5 +433,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const docUploadBtn = document.getElementById('doc-upload-btn');
   if (docUploadBtn) {
     docUploadBtn.addEventListener('click', handleDocUpload);
+  }
+  
+  const dbClearBtn = document.getElementById('db-clear-btn');
+  if (dbClearBtn) {
+    dbClearBtn.addEventListener('click', async () => {
+      if (!confirm("Are you sure you want to clear all claims? This cannot be undone.")) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/claims/clear`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to clear database');
+        loadClaims();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
   }
 });

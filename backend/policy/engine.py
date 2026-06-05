@@ -11,7 +11,7 @@ class PolicyEngine:
     def __init__(self, policy: PolicyConfig = None):
         self.policy = policy or get_policy()
 
-    def evaluate(self, claim: ClaimSubmission) -> ClaimDecision:
+    def evaluate(self, claim: ClaimSubmission, extracted_text: str = "") -> ClaimDecision:
         # Check if active
         if not self.policy.is_active():
             return self._reject(claim, "Policy is not active")
@@ -25,30 +25,57 @@ class PolicyEngine:
         if not cat_config.covered:
             return self._reject(claim, f"Category {cat_key} is explicitly not covered")
 
+        # Check waiting periods
+        member = self.policy.get_member(claim.member_id)
+        if member and member.join_date:
+            join_date = datetime.strptime(member.join_date, "%Y-%m-%d").date()
+            treatment_date = datetime.strptime(claim.treatment_date, "%Y-%m-%d").date()
+            days_since_join = (treatment_date - join_date).days
+            
+            if days_since_join < self.policy.waiting_periods.initial_waiting_period_days:
+                return self._reject(claim, "WAITING_PERIOD: Initial waiting period not completed")
+                
+            text_lower = extracted_text.lower()
+            for condition, days in self.policy.waiting_periods.specific_conditions.items():
+                if condition.lower() in text_lower:
+                    if days_since_join < days:
+                        return self._reject(claim, f"WAITING_PERIOD: Waiting period for {condition} not completed. Eligible after {days} days from joining.")
+
+        # Check Per-Claim Limit Outright Rejection (Only if sub_limit is not higher)
+        limit = cat_config.sub_limit if cat_config.sub_limit > 0 and claim.claim_category.value != "CONSULTATION" else self.policy.coverage.per_claim_limit
+        if claim.claimed_amount > limit and (cat_config.sub_limit == 0 or claim.claim_category.value == "CONSULTATION"):
+            return self._reject(claim, f"PER_CLAIM_EXCEEDED: Claimed amount ({claim.claimed_amount}) exceeds per-claim limit of {self.policy.coverage.per_claim_limit}")
+
+        # Check Pre-Auth
+        if cat_config.requires_pre_auth and cat_config.pre_auth_threshold:
+            if claim.claimed_amount >= cat_config.pre_auth_threshold:
+                return self._reject(claim, "PRE_AUTH_MISSING: Pre-authorization required and missing for this amount. Please submit a pre-auth request.")
+
         # Check hospital network
         is_network = self.policy.is_network_hospital(claim.hospital_name) if claim.hospital_name else False
         
-        # Calculate copay
-        copay_percent = cat_config.copay_percent
-        if is_network and cat_config.network_discount_percent > 0:
-            copay_percent = max(0, copay_percent - cat_config.network_discount_percent)
+        # Calculate network discount and copay sequentially
+        amount_after_discount = claim.claimed_amount
+        if is_network and hasattr(cat_config, 'network_discount_percent') and cat_config.network_discount_percent > 0:
+            amount_after_discount = claim.claimed_amount * (1 - cat_config.network_discount_percent / 100.0)
             
-        amount_after_copay = claim.claimed_amount * (1 - copay_percent / 100.0)
+        amount_after_copay = amount_after_discount * (1 - cat_config.copay_percent / 100.0)
         
         # Apply limits
-        approved_amount = min(
-            amount_after_copay, 
-            cat_config.sub_limit, 
-            self.policy.coverage.per_claim_limit
-        )
+        limit = cat_config.sub_limit if cat_config.sub_limit > 0 and claim.claim_category.value != "CONSULTATION" else self.policy.coverage.per_claim_limit
+        approved_amount = min(amount_after_copay, limit)
 
-        decision = DecisionEnum.APPROVED if approved_amount == claim.claimed_amount else DecisionEnum.PARTIAL
+        if approved_amount < amount_after_copay:
+            decision = DecisionEnum.PARTIAL
+        else:
+            decision = DecisionEnum.APPROVED
+            
         if approved_amount <= 0:
             decision = DecisionEnum.REJECTED
             
         reasons = []
-        if copay_percent > 0:
-            reasons.append(f"Applied {copay_percent}% co-pay")
+        if cat_config.copay_percent > 0:
+            reasons.append(f"Applied {cat_config.copay_percent}% co-pay")
         if approved_amount < amount_after_copay:
             reasons.append("Applied policy limit (category sub-limit or per-claim limit)")
         if is_network:

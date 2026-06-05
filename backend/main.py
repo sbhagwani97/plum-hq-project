@@ -88,6 +88,11 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # ── Templates ─────────────────────────────────────────────────────────────────
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# ── Database ──────────────────────────────────────────────────────────────────
+from backend.db.database import engine, Base
+import backend.db.models  # Ensure models are loaded
+Base.metadata.create_all(bind=engine)
+
 # ── Routers ───────────────────────────────────────────────────────────────────
 from backend.api.routes.policy import router as policy_router
 app.include_router(claims_router, prefix="/api", tags=["claims"])
@@ -99,3 +104,8 @@ app.include_router(policy_router, prefix="/api/policy", tags=["policy"])
 async def serve_dashboard(request: Request) -> HTMLResponse:
     """Serve the main SPA dashboard."""
     return templates.TemplateResponse(request=request, name="index.html")
+
+@app.get("/submit", response_class=HTMLResponse, include_in_schema=False)
+async def serve_submit(request: Request) -> HTMLResponse:
+    """Serve the submit claim page."""
+    return templates.TemplateResponse(request=request, name="submit.html")
