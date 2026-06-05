@@ -202,30 +202,69 @@ Two sub-checks:
 
 ### Component 5: Agent — Document Extractor
 
-**Goal**: Use an LLM with vision to extract structured data from each uploaded document. Must handle noisy, handwritten, stamped, and multilingual Indian medical documents.
+**Goal**: Extract structured data from each uploaded document using a **two-tier parsing strategy**. Start cheap and fast with a local parser; escalate to an LLM vision model only when needed.
 
 #### `backend/agents/document_extractor.py`
 
-Extraction schemas by doc type (Pydantic models):
+---
+
+#### Tier 1 — Local Parser (`local_parser`)
+
+For any file that can be converted to plain text without an LLM:
+
+| Format | Tool |
+|---|---|
+| `.txt`, `.md` | Read directly |
+| `.docx` | `python-docx` |
+| `.pptx` | `python-pptx` |
+| `.pdf` (digital/searchable) | `pdfplumber` or `pypdf` |
+
+**Flow:**
+1. Attempt text extraction using the appropriate local library
+2. If extracted text is **non-empty and passes a minimum length heuristic** → proceed to structured field parsing (regex + simple NLP, no LLM)
+3. If extracted text is **empty, too short, or garbled** (e.g., a scanned PDF returning `\x00` bytes or <50 chars) → escalate to Tier 2
+
+---
+
+#### Tier 2 — Advanced Vision Parser (`advanced_parser`)
+
+Triggered for:
+- Images (`.jpg`, `.jpeg`, `.png`, `.webp`, `.tiff`)
+- PDFs where Tier 1 returned empty or unreadable content (scanned / handwritten)
+
+**Flow:**
+1. Convert PDF pages to images if needed (`pdf2image` / `pymupdf`)
+2. Send image(s) to the Together AI vision model via LangChain
+3. Prompt the model to extract structured fields as JSON (structured output / function calling)
+4. Confidence score per field: `HIGH` / `MEDIUM` / `LOW`
+5. Unextractable fields → `null` + `extraction_note` (e.g., `"rubber stamp obscured amount"`)
+
+---
+
+#### Extraction Schemas (Pydantic models, used by both tiers)
 
 - `ExtractedPrescription` — doctor name/reg, patient name, date, diagnosis, medicines, tests ordered
 - `ExtractedHospitalBill` — hospital name, bill number, date, patient name, line items + amounts, total
 - `ExtractedLabReport` — lab name, sample date, report date, tests + results + normal ranges
 - `ExtractedPharmacyBill` — pharmacy name, drug license, medicines (name, batch, qty, amount), net total
 
-Extraction behavior:
-- Structured output via Gemini function calling / JSON mode
-- Confidence score per field (HIGH / MEDIUM / LOW) — flag LOW fields in trace
-- Fields that can't be extracted: `null` + `extraction_note` explaining why (e.g., "rubber stamp obscured amount")
+---
+
+#### Common extraction behaviors (both tiers)
+
 - Medical shorthand expansion: `HTN → Hypertension`, `T2DM → Type 2 Diabetes Mellitus`
-- Doctor registration number validation against known state formats
+- Doctor registration number validation against known state formats (`KA/XXXXX/YYYY`, etc.)
+- For multi-page PDFs: process each page separately, aggregate line items
+- Result always includes: `parser_used` (`local` or `advanced`), `confidence_score`, `extraction_notes[]`
 
 > **📝 YOUR NOTES HERE** — Document extractor:
-> *e.g., Should we use Gemini 2.0 Flash for extraction or a more capable model (Pro)? Do you want per-page processing for multi-page PDFs? Should we pre-process images (deskew, enhance contrast) before sending to LLM?*
+> *e.g., Which vision model on Together AI for the advanced parser (Llama Vision, Qwen-VL, etc.)? Should Tier 1 local parsing attempt any regex-based field extraction before giving up, or just check if text is non-empty?*
 >
 > ```
 > [Your comments here]
 > ```
+
+
 
 ---
 
