@@ -45,7 +45,9 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
+from backend.api.routes.policy import router as policy_router
 app.include_router(claims_router, prefix="/api", tags=["claims"])
+app.include_router(policy_router, prefix="/api/policy", tags=["policy"])
 
 
 # ── Frontend entrypoint ───────────────────────────────────────────────────────

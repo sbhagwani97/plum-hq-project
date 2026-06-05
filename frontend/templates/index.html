@@ -72,6 +72,22 @@
 
     </section>
 
+    <!-- ── Member Lookup ─────────────────────────────────────────────────── -->
+    <section class="table-card" aria-label="Member Lookup" style="margin-bottom: 2rem;">
+      <div class="table-card-header">
+        <span class="table-card-title">Member Eligibility Lookup</span>
+      </div>
+      <div style="padding: 1.5rem;">
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <input type="text" id="member-search-input" placeholder="Enter Member ID (e.g. EMP001)" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-base); color: var(--text-primary);">
+          <button id="member-search-btn" style="padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Check Eligibility</button>
+        </div>
+        <div id="member-lookup-result" style="display: none; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-elevated);">
+          <!-- Results populated by JS -->
+        </div>
+      </div>
+    </section>
+
     <!-- ── Claims Table ──────────────────────────────────────────────────── -->
     <section class="table-card" aria-label="Claims list">
 

@@ -179,4 +179,82 @@ async function loadClaims() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', loadClaims);
+// ── Member Lookup ─────────────────────────────────────────────────────────────
+
+async function handleMemberSearch() {
+  const input = document.getElementById('member-search-input');
+  const resultDiv = document.getElementById('member-lookup-result');
+  const memberId = input.value.trim().toUpperCase();
+  
+  if (!memberId) return;
+  
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<span class="spinner"></span>Checking eligibility...';
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/policy/coverage/${memberId}`);
+    if (!res.ok) {
+      if (res.status === 404) throw new Error('Member not found in policy');
+      throw new Error(`Server error: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    const { eligibility, policy_limits } = data;
+    
+    let reasonsHtml = '';
+    if (eligibility.reasons && eligibility.reasons.length > 0) {
+      reasonsHtml = `<ul style="color: var(--status-rejected); margin-top: 0.5rem; padding-left: 1.5rem; font-size: 0.85rem;">
+        ${eligibility.reasons.map(r => `<li>${r}</li>`).join('')}
+      </ul>`;
+    }
+    
+    resultDiv.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <div style="font-weight: 700; color: var(--text-primary); font-size: 1.1rem;">${data.name} <span class="claim-id" style="margin-left: 0.5rem;">${data.member_id}</span></div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Relationship: ${data.relationship}</div>
+        </div>
+        <span class="badge ${eligibility.is_valid ? 'badge-approved' : 'badge-rejected'}">
+          ${eligibility.is_valid ? 'ELIGIBLE' : 'INELIGIBLE'}
+        </span>
+      </div>
+      ${reasonsHtml}
+      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle); display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Sum Insured</div>
+          <div style="font-weight: 600;">${formatINR(policy_limits.sum_insured_per_employee)}</div>
+        </div>
+        <div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Annual OPD Limit</div>
+          <div style="font-weight: 600;">${formatINR(policy_limits.annual_opd_limit)}</div>
+        </div>
+        <div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Per Claim Limit</div>
+          <div style="font-weight: 600;">${formatINR(policy_limits.per_claim_limit)}</div>
+        </div>
+      </div>
+    `;
+    
+  } catch (err) {
+    resultDiv.innerHTML = `<span style="color: var(--status-rejected);">⚠️ ${err.message}</span>`;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadClaims();
+  
+  const searchBtn = document.getElementById('member-search-btn');
+  const searchInput = document.getElementById('member-search-input');
+  
+  if (searchBtn) {
+    searchBtn.addEventListener('click', handleMemberSearch);
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleMemberSearch();
+    });
+  }
+});

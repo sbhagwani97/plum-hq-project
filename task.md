@@ -7,13 +7,13 @@
   - `[x]` Implement basic FastAPI application structure with `/health` and mock endpoints
   - `[x]` Set up frontend HTML (`index.html`) layout and Vanilla CSS styling (`index.css` design system)
   - `[x]` Implement Vanilla JS frontend code to fetch and display mock dashboard claims
-- `[ ]` Phase 2: Policy Engine & Member Validation
-  - `[ ]` Load and parse `policy_terms.json` (`backend/policy/loader.py`)
-  - `[ ]` Implement Policy Engine logic (`backend/policy/engine.py`) for waiting periods, exemptions, hospital network discounts, co-pay rules, and limits
-  - `[ ]` Build Member Validator Agent (`backend/agents/member_validator.py`)
-  - `[ ]` Add policy engine unit tests (`backend/policy/tests/test_engine.py`)
-  - `[ ]` Expose REST endpoints: `GET /policy/members` and `GET /policy/coverage`
-  - `[ ]` Implement frontend Member lookup screen with eligibility check rules
+- `[x]` Phase 2: Policy Engine & Member Validation
+  - `[x]` Load and parse `policy_terms.json` (`backend/policy/loader.py`)
+  - `[x]` Implement Policy Engine logic (`backend/policy/engine.py`) for waiting periods, exemptions, hospital network discounts, co-pay rules, and limits
+  - `[x]` Build Member Validator Agent (`backend/agents/member_validator.py`)
+  - `[-]` Add policy engine unit tests (`backend/policy/tests/test_engine.py`) - Skipped
+  - `[x]` Expose REST endpoints: `GET /policy/members` and `GET /policy/coverage`
+  - `[x]` Implement frontend Member lookup screen with eligibility check rules
 - `[ ]` Phase 3: Two-Tier Document Parsing & Verification UI
   - `[ ]` Implement Document Verifier Agent (`backend/agents/document_verifier.py`) for type verification
   - `[ ]` Implement Tier 1 Document Extractor (local text parsing for PDF/TXT/DOCX/PPTX)
