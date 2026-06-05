@@ -1,12 +1,12 @@
 # Checklist for Plum HQ AI Claims Processing System
 
-- `[/]` Phase 1: Environment, Basic API & Dashboard Layout
-  - `[/]` Create monorepo folder structure (`backend/`, `backend/static/`, `backend/templates/`)
-  - `[ ]` Initialize backend dependencies (FastAPI, pydantic, deepagents, etc.)
-  - `[ ]` Define Pydantic models for claim submission, decisions, and traces (`backend/models/claim.py`)
-  - `[ ]` Implement basic FastAPI application structure with `/health` and mock endpoints
-  - `[ ]` Set up frontend HTML (`index.html`) layout and Vanilla CSS styling (`index.css` design system)
-  - `[ ]` Implement Vanilla JS frontend code to fetch and display mock dashboard claims
+- `[x]` Phase 1: Environment, Basic API & Dashboard Layout
+  - `[x]` Create monorepo folder structure (`backend/`, `frontend/`)
+  - `[x]` Initialize backend dependencies (FastAPI, pydantic, deepagents, etc.)
+  - `[x]` Define Pydantic models for claim submission, decisions, and traces (`backend/models/claim.py`)
+  - `[x]` Implement basic FastAPI application structure with `/health` and mock endpoints
+  - `[x]` Set up frontend HTML (`index.html`) layout and Vanilla CSS styling (`index.css` design system)
+  - `[x]` Implement Vanilla JS frontend code to fetch and display mock dashboard claims
 - `[ ]` Phase 2: Policy Engine & Member Validation
   - `[ ]` Load and parse `policy_terms.json` (`backend/policy/loader.py`)
   - `[ ]` Implement Policy Engine logic (`backend/policy/engine.py`) for waiting periods, exemptions, hospital network discounts, co-pay rules, and limits

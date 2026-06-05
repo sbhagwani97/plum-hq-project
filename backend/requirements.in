@@ -1,0 +1,35 @@
+# ── Web framework ──────────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
+jinja2
+
+# ── Data / validation ──────────────────────────────────────────────────────────
+pydantic>=2
+pydantic-settings
+
+# ── LLM / Agents (Phase 3+) ────────────────────────────────────────────────────
+langchain
+langchain-together
+langgraph
+deepagents
+
+# ── Document parsing — Tier 1 local (Phase 3+) ────────────────────────────────
+pdfplumber
+pypdf
+python-docx
+python-pptx
+
+# ── Document parsing — Tier 2 vision (Phase 3+) ───────────────────────────────
+pdf2image
+pymupdf
+
+# ── Database (Phase 4+) ────────────────────────────────────────────────────────
+sqlalchemy[asyncio]
+aiosqlite
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+pytest
+pytest-asyncio
+httpx
