@@ -17,11 +17,9 @@ The system will be a **multi-agent pipeline** (bonus points) where each agent ha
 ## Open Questions / User Comment Space
 
 > **📝 YOUR NOTES HERE** — Overall architecture preferences:
-> *e.g., Do you want a monorepo or separate repos for backend/frontend? Any preference on cloud provider for deployment?*
->
-> ```
-> [Your comments here]
-> ```
+> *Do you want a monorepo or separate repos for backend/frontend? Any preference on cloud provider for deployment?* I want mono repo for this project.
+> *LLM Model source* It will be langchain/langgraph based ChatTogether implementation.
+> *Any specific agent framework* It will be deepagent architecture with sub agents performing various isolated tasks as per langchain documentation.
 
 ---
 
@@ -30,40 +28,55 @@ The system will be a **multi-agent pipeline** (bonus points) where each agent ha
 | Layer | Choice | Rationale |
 |---|---|---|
 | Backend | **Python / FastAPI** | Async-native, great for LLM calls, fast to build |
-| LLM | **Google Gemini 2.0 Flash** (primary) | Multimodal (vision for docs), fast, cheap |
+| LLM | **Together AI** via **LangChain** | Flexible model routing, managed inference, LangChain ecosystem |
+| Agent Framework | **`deepagents`** SDK (PyPI) | LangChain's agent harness with native subagent spawning, context management, streaming, and LangGraph runtime underneath |
 | Database | **SQLite** (dev) → **PostgreSQL** (prod) | Structured claim storage, easy to run locally |
-| Task Queue | **FastAPI BackgroundTasks** or **Celery** | Async pipeline execution |
+| ~~Task Queue~~ | ~~Celery~~ — **removed** | LangGraph manages async orchestration natively; FastAPI `async/await` handles the rest. No external broker needed. |
 | Document Storage | Local filesystem (dev) → S3-compatible | PDF/image uploads |
 | Frontend | **Next.js** or plain **React + Vite** | TBD — defer to frontend phase |
 
-> **📝 YOUR NOTES HERE** — Tech stack preferences:
-> *e.g., Any preference on LLM provider (OpenAI vs Gemini vs Anthropic)? Do you already have API keys set up?*
->
-> ```
-> [Your comments here]
-> ```
-
 ---
 
-## System Architecture: Multi-Agent Pipeline
+## System Architecture: Deep Agents SDK
+
+The `deepagents` package (`pip install deepagents`) is LangChain's agent harness — a single `create_deep_agent()` call gives you a fully configured agent with built-in:
+- **Subagent spawning** via a `task` tool (each sub-agent runs in its own isolated context window)
+- **Context compression** — automatically summarises history and offloads large results to a virtual filesystem
+- **Streaming** — typed event projections per agent and per subagent
+- **LangGraph runtime** underneath — durable execution, human-in-the-loop pauses
+
+### How it maps to our pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Claim Orchestrator                           │
-│  (manages agent execution, handles failures, builds trace)       │
-└──────┬──────────┬──────────┬──────────┬──────────┬─────────────┘
-       │          │          │          │          │
-       ▼          ▼          ▼          ▼          ▼
-  [1] Member   [2] Doc    [3] Doc    [4] Policy [5] Decision
-  Validator    Verifier   Extractor   Engine     Agent
-  (sync)       (LLM)      (LLM)       (rules)    (LLM + rules)
+┌──────────────────────────────────────────────────────────────────────┐
+│  ROOT AGENT  (create_deep_agent, Together AI model)                  │
+│  Orchestrates the full claims pipeline, owns ClaimTrace              │
+│                                                                      │
+│  Built-in `task` tool spawns SUBAGENTS for isolated work:           │
+│                                                                      │
+│   [task] MemberValidator      → pure rules, no LLM, fast            │
+│   [task] DocumentVerifier     → LLM vision: type check + quality    │
+│   [task] DocumentExtractor    → LLM vision: structured extraction   │
+│   [task] DecisionAgent        → LLM + policy engine → final decision│
+│                                                                      │
+│  PolicyEngine runs in-process (pure Python, no LLM, no subagent)   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-Each agent:
-- Accepts a typed input contract
-- Returns a typed output contract + confidence score
-- Catches its own exceptions and returns a degraded result (never crashes the pipeline)
-- Appends its trace to the shared `ClaimTrace`
+Model string format for Together AI:
+```python
+agent = create_deep_agent(
+    model="together:meta-llama/Llama-3.3-70B-Instruct-Turbo",  # or any Together model
+    tools=[...],
+    system_prompt="You are a claims processing orchestrator...",
+)
+```
+
+Each subagent:
+- Gets its own `create_deep_agent()` instance with a focused system prompt
+- Accepts a typed Pydantic input, returns a typed Pydantic output
+- Failures are caught by `agent_guard` wrapper — pipeline continues with degraded confidence
+- Appends its result to the shared `ClaimTrace`
 
 ---
 
