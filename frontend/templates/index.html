@@ -7,159 +7,199 @@
   <title>Plum HQ · Claims Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/static/css/index.css" />
 </head>
 <body>
 
-  <!-- ── Navigation ──────────────────────────────────────────────────────── -->
-  <nav class="navbar" role="navigation" aria-label="Main navigation">
-    <div class="navbar-brand">
-      <div class="navbar-logo" aria-hidden="true">P</div>
-      <span class="navbar-name">Plum <span>HQ</span></span>
+  <!-- ── Mobile sidebar toggle ───────────────────────────────────────────── -->
+  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation"><i class="fa-solid fa-bars"></i></button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-header">
+      <div class="sidebar-logo" aria-hidden="true">P</div>
+      <span class="sidebar-brand">Plum <span>HQ</span></span>
     </div>
-    <div class="navbar-meta">
-      <span class="dot" title="API online"></span>
-      Claims Processing System &nbsp;·&nbsp; v0.1.0
-      &nbsp;|&nbsp;
-      <a href="/submit" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">+ New Claim</a>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-nav-label">Menu</div>
+      <a href="/" class="sidebar-link active" id="nav-dashboard">
+        <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span>
+        Dashboard
+      </a>
+      <a href="/submit" class="sidebar-link" id="nav-submit">
+        <span class="nav-icon"><i class="fa-solid fa-file-circle-plus"></i></span>
+        New Claim
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-status">
+        <span class="dot" title="API online"></span>
+        Claims Processing · v0.1.0
+      </div>
     </div>
-  </nav>
+  </aside>
 
-  <!-- ── Main Page ───────────────────────────────────────────────────────── -->
-  <main class="page" id="main-content">
+  <!-- ── Main Content ────────────────────────────────────────────────────── -->
+  <div class="main-content">
+    <main class="page" id="main-content">
 
-    <header class="page-header">
-      <h1 class="page-title">Claims Dashboard</h1>
-      <p class="page-subtitle">Overview of all OPD claim submissions and their processing status.</p>
-    </header>
+      <header class="page-header">
+        <h1 class="page-title">Claims Dashboard</h1>
+        <p class="page-subtitle">Overview of all OPD claim submissions and their processing status.</p>
+      </header>
 
-    <!-- ── Stats Grid ───────────────────────────────────────────────────── -->
-    <section class="stats-grid" aria-label="Claims summary statistics">
+      <!-- ── Stats Grid ────────────────────────────────────────────────────── -->
+      <section class="stats-grid" aria-label="Claims summary statistics">
 
-      <div class="stat-card total">
-        <div class="stat-label">Total Claims</div>
-        <div class="stat-value" id="stat-total">—</div>
-        <div class="stat-sub">All submissions</div>
-      </div>
-
-      <div class="stat-card approved">
-        <div class="stat-label">Approved</div>
-        <div class="stat-value" id="stat-approved">—</div>
-        <div class="stat-sub">Fully covered</div>
-      </div>
-
-      <div class="stat-card partial">
-        <div class="stat-label">Partial</div>
-        <div class="stat-value" id="stat-partial">—</div>
-        <div class="stat-sub">Partially covered</div>
-      </div>
-
-      <div class="stat-card rejected">
-        <div class="stat-label">Rejected</div>
-        <div class="stat-value" id="stat-rejected">—</div>
-        <div class="stat-sub">Not eligible</div>
-      </div>
-
-      <div class="stat-card manual">
-        <div class="stat-label">Manual Review</div>
-        <div class="stat-value" id="stat-manual">—</div>
-        <div class="stat-sub">Requires review</div>
-      </div>
-
-      <div class="stat-card pending">
-        <div class="stat-label">Pending</div>
-        <div class="stat-value" id="stat-pending">—</div>
-        <div class="stat-sub">Awaiting processing</div>
-      </div>
-
-    </section>
-
-    <!-- ── Claims Table ──────────────────────────────────────────────────── -->
-    <section class="table-card" aria-label="Claims list">
-
-      <div class="table-card-header">
-        <span class="table-card-title">Recent Claims</span>
-        <span class="table-card-count" id="claims-count">Loading…</span>
-      </div>
-
-      <div style="overflow-x: auto;">
-        <table class="claims-table" id="claims-table">
-          <thead>
-            <tr>
-              <th>Claim ID</th>
-              <th>Member</th>
-              <th>Category</th>
-              <th style="text-align: right;">Amount (₹)</th>
-              <th>Decision / Status</th>
-              <th>Treatment Date</th>
-              <th>Submitted At</th>
-            </tr>
-          </thead>
-          <tbody id="claims-tbody">
-            <!-- Claims populated by JS -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-    <!-- ── Test Section ──────────────────────────────────────────────────────── -->
-    <details class="test-section" aria-label="Testing Utilities" style="margin-bottom: 2rem; padding: 1.5rem; background: var(--bg-elevated); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-      <summary style="cursor: pointer; outline: none; font-size: 1.25rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Test Utilities</summary>
-      
-      <!-- ── Database Utilities ──────────────────────────────────────────────── -->
-      <section class="table-card" aria-label="Database Utilities" style="margin-bottom: 2rem;">
-        <div class="table-card-header">
-          <span class="table-card-title">Database Utilities</span>
+        <div class="stat-card total">
+          <div class="stat-card-top">
+            <div class="stat-label">Total Claims</div>
+            <div class="stat-icon"><i class="fa-solid fa-layer-group"></i></div>
+          </div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-sub">All submissions</div>
         </div>
-        <div style="padding: 1.5rem; display: flex; gap: 1rem; align-items: center;">
-          <button id="db-clear-btn" style="padding: 0.5rem 1rem; background: var(--status-rejected); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Clear All Claims</button>
-          <span style="color: var(--text-muted); font-size: 0.9rem;">Permanently deletes all claims from the SQLite database. Useful for resetting the demo.</span>
+
+        <div class="stat-card approved">
+          <div class="stat-card-top">
+            <div class="stat-label">Approved</div>
+            <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+          </div>
+          <div class="stat-value" id="stat-approved">—</div>
+          <div class="stat-sub">Fully covered</div>
+        </div>
+
+        <div class="stat-card partial">
+          <div class="stat-card-top">
+            <div class="stat-label">Partial</div>
+            <div class="stat-icon"><i class="fa-solid fa-circle-half-stroke"></i></div>
+          </div>
+          <div class="stat-value" id="stat-partial">—</div>
+          <div class="stat-sub">Partially covered</div>
+        </div>
+
+        <div class="stat-card rejected">
+          <div class="stat-card-top">
+            <div class="stat-label">Rejected</div>
+            <div class="stat-icon"><i class="fa-solid fa-circle-xmark"></i></div>
+          </div>
+          <div class="stat-value" id="stat-rejected">—</div>
+          <div class="stat-sub">Not eligible</div>
+        </div>
+
+        <div class="stat-card manual">
+          <div class="stat-card-top">
+            <div class="stat-label">Manual Review</div>
+            <div class="stat-icon"><i class="fa-solid fa-eye"></i></div>
+          </div>
+          <div class="stat-value" id="stat-manual">—</div>
+          <div class="stat-sub">Requires review</div>
+        </div>
+
+        <div class="stat-card pending">
+          <div class="stat-card-top">
+            <div class="stat-label">Pending</div>
+            <div class="stat-icon"><i class="fa-regular fa-clock"></i></div>
+          </div>
+          <div class="stat-value" id="stat-pending">—</div>
+          <div class="stat-sub">Awaiting processing</div>
+        </div>
+
+      </section>
+
+      <!-- ── Claims Table ────────────────────────────────────────────────── -->
+      <section class="table-card" aria-label="Claims list">
+
+        <div class="table-card-header">
+          <span class="table-card-title">Recent Claims</span>
+          <span class="table-card-count" id="claims-count">Loading…</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="claims-table" id="claims-table">
+            <thead>
+              <tr>
+                <th>Claim ID</th>
+                <th>Member</th>
+                <th>Category</th>
+                <th style="text-align: right;">Amount (₹)</th>
+                <th>Decision / Status</th>
+                <th>Treatment Date</th>
+                <th>Submitted At</th>
+              </tr>
+            </thead>
+            <tbody id="claims-tbody">
+              <!-- Claims populated by JS -->
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <!-- ── Member Lookup ─────────────────────────────────────────────────── -->
-      <section class="table-card" aria-label="Member Lookup" style="margin-bottom: 2rem;">
-        <div class="table-card-header">
-          <span class="table-card-title">Member Eligibility Lookup</span>
-        </div>
-        <div style="padding: 1.5rem;">
-          <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-            <input type="text" id="member-search-input" placeholder="Enter Member ID (e.g. EMP001)" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-base); color: var(--text-primary);">
-            <button id="member-search-btn" style="padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Check Eligibility</button>
-          </div>
-          <div id="member-lookup-result" style="display: none; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-elevated);">
-            <!-- Results populated by JS -->
-          </div>
-        </div>
-      </section>
+      <!-- ── Test Section ────────────────────────────────────────────────── -->
+      <details class="test-section" aria-label="Testing Utilities">
+        <summary><i class="fa-solid fa-screwdriver-wrench"></i> Test Utilities</summary>
 
-      <!-- ── Document Verification Test ────────────────────────────────────── -->
-      <section class="table-card" aria-label="Document Verification">
-        <div class="table-card-header">
-          <span class="table-card-title">Document Parsing & Verification Test</span>
-        </div>
-        <div style="padding: 1.5rem;">
-          <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
-            Upload a medical document (PDF, DOCX, JPG, PNG) to test the 2-Tier extraction pipeline.
-          </p>
-          <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center;">
-            <input type="file" id="doc-upload-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" style="flex: 1; padding: 0.5rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--bg-base); color: var(--text-primary);">
-            <button id="doc-upload-btn" style="padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Extract & Verify</button>
+        <!-- ── Database Utilities ────────────────────────────────────────── -->
+        <section class="table-card" aria-label="Database Utilities" style="margin-bottom: 1.5rem;">
+          <div class="table-card-header">
+            <span class="table-card-title">Database Utilities</span>
           </div>
-          <div id="doc-verify-result" style="display: none; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-elevated);">
-            <!-- Results populated by JS -->
+          <div style="padding: 1.25rem 1.75rem; display: flex; gap: 1rem; align-items: center;">
+            <button id="db-clear-btn" class="test-btn-danger"><i class="fa-solid fa-trash-can"></i> Clear All Claims</button>
+            <span style="color: var(--text-muted); font-size: 0.85rem;">Permanently deletes all claims from the SQLite database. Useful for resetting the demo.</span>
           </div>
-        </div>
-      </section>
-    </details>
+        </section>
 
-  </main>
+        <!-- ── Member Lookup ─────────────────────────────────────────────── -->
+        <section class="table-card" aria-label="Member Lookup" style="margin-bottom: 1.5rem;">
+          <div class="table-card-header">
+            <span class="table-card-title">Member Eligibility Lookup</span>
+          </div>
+          <div style="padding: 1.25rem 1.75rem;">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+              <input type="text" id="member-search-input" placeholder="Enter Member ID (e.g. EMP001)" class="test-input">
+              <button id="member-search-btn" class="test-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Check Eligibility</button>
+            </div>
+            <div id="member-lookup-result" class="test-result" style="display: none;">
+              <!-- Results populated by JS -->
+            </div>
+          </div>
+        </section>
 
-  <!-- Trace Modal -->
-  <div id="trace-modal" class="modal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-    <div class="modal-content" style="background: var(--bg-elevated); padding: 2rem; border-radius: var(--radius-md); max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative;">
-      <span id="close-modal" style="position: absolute; top: 1rem; right: 1.5rem; cursor: pointer; font-size: 1.5rem;">&times;</span>
-      <h2>Claim Trace: <span id="trace-claim-id"></span></h2>
-      <div id="trace-timeline" style="margin-top: 1.5rem; border-left: 2px solid var(--border); padding-left: 1rem;">
+        <!-- ── Document Verification Test ────────────────────────────────── -->
+        <section class="table-card" aria-label="Document Verification">
+          <div class="table-card-header">
+            <span class="table-card-title">Document Parsing & Verification Test</span>
+          </div>
+          <div style="padding: 1.25rem 1.75rem;">
+            <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.85rem;">
+              Upload a medical document (PDF, DOCX, JPG, PNG) to test the 2-Tier extraction pipeline.
+            </p>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center;">
+              <input type="file" id="doc-upload-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" class="test-input">
+              <button id="doc-upload-btn" class="test-btn-primary"><i class="fa-solid fa-file-circle-check"></i> Extract & Verify</button>
+            </div>
+            <div id="doc-verify-result" class="test-result" style="display: none;">
+              <!-- Results populated by JS -->
+            </div>
+          </div>
+        </section>
+      </details>
+
+    </main>
+  </div>
+
+  <!-- ── Trace Modal ─────────────────────────────────────────────────────── -->
+  <div id="trace-modal" class="modal">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close" id="close-modal" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+      <h2 class="modal-title">Claim Trace: <span id="trace-claim-id"></span></h2>
+      <div id="trace-timeline" class="trace-timeline">
         <!-- Trace steps populated by JS -->
       </div>
     </div>

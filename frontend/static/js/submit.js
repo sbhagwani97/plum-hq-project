@@ -215,10 +215,29 @@ document.addEventListener('DOMContentLoaded', () => {
     addMessage(
       `<strong>Document ${idx + 1} of ${total}:</strong>
        Please upload your <strong>${label}</strong>.<br>
-       <span style="color:var(--text-muted);font-size:0.85rem;">${hint}</span>`,
+       <span style="color:var(--text-muted);font-size:0.85rem;">${hint}</span>
+       <button class="inline-upload-btn" style="
+         display:inline-flex;align-items:center;gap:0.4rem;margin-top:0.65rem;
+         padding:0.5rem 1rem;background:var(--accent-subtle);color:var(--accent-primary);
+         border:1px solid var(--accent-primary);border-radius:9999px;cursor:pointer;
+         font-size:0.82rem;font-weight:600;font-family:inherit;
+         transition:background 0.15s,transform 0.15s;">
+         <i class="fa-solid fa-paperclip"></i> Choose File
+       </button>`,
       'bot', true
     );
-    toggleInput(false, true);   // show upload button, keep text disabled
+
+    // Wire the inline button to the hidden file input
+    const allBtns = messagesContainer.querySelectorAll('.inline-upload-btn');
+    const inlineBtn = allBtns[allBtns.length - 1];
+    if (inlineBtn) {
+      inlineBtn.addEventListener('click', () => {
+        fileInput.value = '';
+        fileInput.click();
+      });
+    }
+
+    toggleInput(false, false);   // keep bottom bar hidden, upload is inline now
   }
 
   // ── Parse a single uploaded document via /claims/parse-doc ───────────────
@@ -230,6 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      // Send member_id so the backend can detect name mismatches early
+      if (state.member_id) {
+        formData.append('member_id', state.member_id);
+      }
 
       const res = await fetch('/api/claims/parse-doc', { method: 'POST', body: formData });
       typingEl.remove();
@@ -255,8 +278,8 @@ document.addEventListener('DOMContentLoaded', () => {
         : '';
 
       // Warn if the detected type differs from what was expected
-      const mismatch = detectedType !== 'UNKNOWN' && detectedType !== expectedType;
-      const mismatchHtml = mismatch
+      const typeMismatch = detectedType !== 'UNKNOWN' && detectedType !== expectedType;
+      const typeMismatchHtml = typeMismatch
         ? `<div style="margin-top:0.4rem;color:var(--status-partial);font-size:0.82rem;">
              ⚠️ This looks like a <strong>${detectedLabel}</strong>,
              but we expected a <strong>${expectedLabel}</strong>.
@@ -264,10 +287,61 @@ document.addEventListener('DOMContentLoaded', () => {
            </div>`
         : '';
 
+      // ── Early name-mismatch → block and offer re-upload / restart ────
+      if (result.name_mismatch) {
+        const nm = result.name_mismatch;
+        const nameMismatchHtml = `
+          <div style="margin-top:0.6rem;padding:0.6rem 0.8rem;background:var(--status-rejected-bg);
+                      border:1px solid var(--status-rejected);border-radius:var(--radius-sm);
+                      color:var(--status-rejected);font-size:0.82rem;line-height:1.45;">
+            <i class="fa-solid fa-triangle-exclamation"></i> <strong>Name Mismatch:</strong> ${nm.message}
+          </div>`;
+
+        addMessage(
+          `⚠️ <strong>${file.name}</strong> parsed.<br>
+           Detected: <strong>${detectedLabel}</strong>
+           ${nameMismatchHtml}
+           ${fieldsHtml}`,
+          'bot', true
+        );
+
+        // Do NOT store the doc or advance — offer recovery options
+        toggleInput(false, false);
+        addQuickReplies([
+          { label: '\u00a0Re-upload this document',  value: 'REUPLOAD' },
+          { label: '\u00a0Ok, lets try again...',        value: 'RESTART' },
+        ], (choice) => {
+          if (choice === 'REUPLOAD') {
+            // Re-ask for the same document slot
+            setTimeout(() => askForCurrentDoc(), 300);
+          } else {
+            // Full restart
+            state.step            = 'ASK_MEMBER_ID';
+            state.member_id       = null;
+            state.claim_category  = null;
+            state.required_docs   = [];
+            state.collected_docs  = [];
+            state.current_doc_idx = 0;
+            state.extracted_text  = null;
+            state.extracted_fields = null;
+            state.initial_trace   = null;
+            state.claim_id        = null;
+
+            addMessage("No problem! Let's start fresh.", 'bot');
+            setTimeout(() => {
+              addMessage('Please enter your Member ID (e.g. EMP001).');
+              toggleInput(true);
+              chatInput.focus();
+            }, 600);
+          }
+        });
+        return;   // ← exit early, skip normal doc storage
+      }
+
       addMessage(
         `✅ <strong>${file.name}</strong> parsed.<br>
          Detected: <strong>${detectedLabel}</strong>
-         ${mismatchHtml}
+         ${typeMismatchHtml}
          ${fieldsHtml}`,
         'bot', true
       );

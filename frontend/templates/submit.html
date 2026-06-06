@@ -3,46 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plum HQ — Submit a new health insurance claim via guided chat assistant." />
   <title>Plum HQ · Chat Submission</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="/static/css/index.css" />
 </head>
 <body>
-  <nav class="navbar" role="navigation">
-    <div class="navbar-brand">
-      <div class="navbar-logo" aria-hidden="true">P</div>
-      <span class="navbar-name">Plum <span>HQ</span></span>
-    </div>
-    <div class="navbar-meta">
-      <a href="/" style="color: var(--text-muted); text-decoration: none;">&larr; Back to Dashboard</a>
-    </div>
-  </nav>
 
-  <main class="page">
-    <header class="page-header" style="text-align: center; margin-bottom: 1rem;">
-      <h1 class="page-title">Claim Assistant</h1>
-      <p class="page-subtitle">I'll help you submit your claim step-by-step.</p>
-    </header>
+  <!-- ── Mobile sidebar toggle ───────────────────────────────────────────── -->
+  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle navigation"><i class="fa-solid fa-bars"></i></button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <div class="chat-wrapper">
-      <div class="chat-messages" id="chat-messages">
-        <!-- Messages will be injected here -->
-      </div>
-      
-      <div class="chat-input-area" id="chat-input-area">
-        <form class="chat-input-form" id="chat-form">
-          <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" />
-          
-          <!-- Hidden file input (one at a time, guided by the bot) -->
-          <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" style="display: none;" />
-          <button type="button" id="btn-upload" style="background: var(--bg-overlay); color: var(--text-primary); border: 1px solid var(--border);" title="Upload Document">📎</button>
-          
-          <button type="submit" id="btn-send" title="Send">➤</button>
-        </form>
-        <div class="chat-quick-replies" id="quick-replies"></div>
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-header">
+      <div class="sidebar-logo" aria-hidden="true">P</div>
+      <span class="sidebar-brand">Plum <span>HQ</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-nav-label">Menu</div>
+      <a href="/" class="sidebar-link" id="nav-dashboard">
+        <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span>
+        Dashboard
+      </a>
+      <a href="/submit" class="sidebar-link active" id="nav-submit">
+        <span class="nav-icon"><i class="fa-solid fa-file-circle-plus"></i></span>
+        New Claim
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-status">
+        <span class="dot" title="API online"></span>
+        Claims Processing · v0.1.0
       </div>
     </div>
-  </main>
+  </aside>
 
+  <!-- ── Main Content ────────────────────────────────────────────────────── -->
+  <div class="main-content submit-layout">
+    <main class="page">
+      <header class="page-header">
+        <h1 class="page-title">Claim Assistant</h1>
+        <p class="page-subtitle">I'll help you submit your claim step-by-step.</p>
+      </header>
+
+      <div class="chat-wrapper">
+        <div class="chat-messages" id="chat-messages">
+          <!-- Messages will be injected here -->
+        </div>
+
+        <div class="chat-input-area" id="chat-input-area">
+          <form class="chat-input-form" id="chat-form">
+            <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" />
+
+            <!-- Hidden file input (one at a time, guided by the bot) -->
+            <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" style="display: none;" />
+            <button type="button" id="btn-upload" style="background: var(--bg-overlay); color: var(--text-primary); border: 1px solid var(--border);" title="Upload Document"><i class="fa-solid fa-paperclip"></i></button>
+
+            <button type="submit" id="btn-send" title="Send"><i class="fa-solid fa-paper-plane"></i></button>
+          </form>
+          <div class="chat-quick-replies" id="quick-replies"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Sidebar toggle (shared with dashboard)
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggle = document.getElementById('sidebar-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (toggle && sidebar && overlay) {
+        toggle.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('active');
+        });
+        overlay.addEventListener('click', () => {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('active');
+        });
+      }
+    });
+  </script>
   <script src="/static/js/submit.js"></script>
 </body>
 </html>

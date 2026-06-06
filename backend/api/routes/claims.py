@@ -191,11 +191,19 @@ async def verify_docs(file: UploadFile = File(...)) -> dict[str, Any]:
 
 
 @router.post("/claims/parse-doc")
-async def parse_single_doc(file: UploadFile = File(...)) -> dict[str, Any]:
+async def parse_single_doc(
+    file: UploadFile = File(...),
+    member_id: str = Form(None),
+) -> dict[str, Any]:
     """
     Lightweight single-document parse used by the chat UI for per-upload feedback.
     Extracts text, classifies the document type, and returns key fields.
     Does NOT run the full verification pipeline — that happens at /claims/extract.
+
+    When ``member_id`` is supplied the endpoint also compares the patient name
+    found in the document against the policy member name and returns a
+    ``name_mismatch`` object when they don't match, enabling the chat UI to
+    alert the user immediately rather than waiting until final processing.
     """
     file_bytes = await file.read()
     fname = file.filename or "document"
@@ -219,12 +227,42 @@ async def parse_single_doc(file: UploadFile = File(...)) -> dict[str, Any]:
         doc_type = _classify_document(text, llm)
         key_fields = _extract_fields(text, doc_type, llm)
 
-        return {
+        # ── Early name-mismatch detection ────────────────────────────────
+        name_mismatch = None
+        if member_id:
+            from backend.policy.loader import get_policy
+            policy = get_policy()
+            member = policy.get_member(member_id.strip().upper())
+            if member and member.name:
+                doc_name = (
+                    key_fields.get("Patient Name")
+                    or key_fields.get("Patient")
+                    or key_fields.get("Name")
+                )
+                if doc_name:
+                    member_parts = [p.lower() for p in member.name.split() if len(p) > 2]
+                    doc_name_lower = doc_name.lower()
+                    match_found = any(part in doc_name_lower for part in member_parts)
+                    if not match_found:
+                        name_mismatch = {
+                            "doc_patient_name": doc_name,
+                            "policy_member_name": member.name,
+                            "message": (
+                                f"This document appears to belong to '{doc_name}', "
+                                f"but the claim is for '{member.name}' ({member_id}). "
+                                f"Please make sure you're uploading the right document."
+                            ),
+                        }
+
+        result: dict[str, Any] = {
             "filename": fname,
             "doc_type": doc_type,
             "extracted_text": text,
             "key_fields": key_fields,
         }
+        if name_mismatch:
+            result["name_mismatch"] = name_mismatch
+        return result
     except Exception as e:
         return {"error": str(e)}
 

@@ -1,0 +1,19 @@
+SMILE CARE DENTAL CLINIC
+HOSPITAL BILL
+123 Health Ave, Bangalore, KA
+GSTIN: 29AABCU9603R1ZX
+Bill Number: DENT-4589
+Date: 05-Jun-2024
+
+Patient Name: Rajesh Kumar
+Patient Age: 42
+Patient Gender: Male
+
+Line Items:
+- Consultation, 500
+- Teeth Whitening, 4500
+
+Subtotal: 5000
+GST Amount: 0
+Total Amount: 5000
+Payment Mode: UPI
