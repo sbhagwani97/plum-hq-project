@@ -183,6 +183,7 @@ a:hover { opacity: 0.8; }
 .sidebar-nav {
   padding: 0.5rem 0.75rem;
   flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar-nav-label {
@@ -233,6 +234,7 @@ a:hover { opacity: 0.8; }
 .sidebar-footer {
   padding: 1rem 1.25rem;
   border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .sidebar-status {
@@ -1118,3 +1120,4 @@ a:hover { opacity: 0.8; }
 .navbar {
   display: none;
 }
+@media (max-width: 960px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .sidebar-toggle { display: flex; } .sidebar-overlay.active { display: block; } .main-content { margin-left: 0; } .page { padding: 4.5rem 1.5rem 2rem; } .submit-layout .page { padding-top: 4.5rem; } } @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
