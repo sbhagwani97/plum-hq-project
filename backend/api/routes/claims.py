@@ -160,7 +160,9 @@ async def process_claim(req: ProcessClaimRequest):
 from fastapi import File, UploadFile
 from backend.extractors.tier1_local import extract_text
 from backend.extractors.tier2_vision import extract_text_from_image
-from backend.agents.document_verifier import verify_document
+from backend.agents.document_verifier import verify_document, _classify_document, _extract_fields
+from langchain_openai import ChatOpenAI
+import os as _os
 
 @router.post("/claims/verify-docs")
 async def verify_docs(file: UploadFile = File(...)) -> dict[str, Any]:
@@ -169,7 +171,6 @@ async def verify_docs(file: UploadFile = File(...)) -> dict[str, Any]:
     ext = file.filename.split(".")[-1].lower() if file.filename else ""
     
     try:
-        # Route to Tier 1 or Tier 2 based on extension
         if ext in ["pdf", "docx", "doc", "txt"]:
             text = extract_text(file_bytes, file.filename)
         elif ext in ["jpg", "jpeg", "png", "webp"]:
@@ -177,7 +178,6 @@ async def verify_docs(file: UploadFile = File(...)) -> dict[str, Any]:
         else:
             return {"error": f"Unsupported file type: {ext}"}
             
-        # Verify document using Qwen
         verification = verify_document(text)
         
         return {
@@ -188,4 +188,44 @@ async def verify_docs(file: UploadFile = File(...)) -> dict[str, Any]:
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+@router.post("/claims/parse-doc")
+async def parse_single_doc(file: UploadFile = File(...)) -> dict[str, Any]:
+    """
+    Lightweight single-document parse used by the chat UI for per-upload feedback.
+    Extracts text, classifies the document type, and returns key fields.
+    Does NOT run the full verification pipeline — that happens at /claims/extract.
+    """
+    file_bytes = await file.read()
+    fname = file.filename or "document"
+    ext = fname.split(".")[-1].lower() if "." in fname else ""
+
+    try:
+        if ext in ["pdf", "docx", "doc", "txt"]:
+            text = extract_text(file_bytes, fname)
+        elif ext in ["jpg", "jpeg", "png", "webp"]:
+            text = extract_text_from_image(file_bytes, file.content_type or "image/jpeg")
+        else:
+            return {"error": f"Unsupported file type: .{ext}"}
+
+        llm = ChatOpenAI(
+            model="google/gemma-3n-E4B-it",
+            base_url="https://api.together.xyz/v1",
+            api_key=_os.getenv("TOGETHER_API_KEY"),
+            temperature=0.0,
+            max_tokens=600,
+        )
+        doc_type = _classify_document(text, llm)
+        key_fields = _extract_fields(text, doc_type, llm)
+
+        return {
+            "filename": fname,
+            "doc_type": doc_type,
+            "extracted_text": text,
+            "key_fields": key_fields,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 

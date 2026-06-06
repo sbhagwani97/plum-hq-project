@@ -34,6 +34,8 @@ class ClaimState(TypedDict):
     
     extracted_text: Optional[str]
     extracted_fields: Optional[dict]
+    # List of doc types detected per uploaded file e.g. ["PRESCRIPTION", "PHARMACY_BILL"]
+    detected_doc_types: Optional[list]
     
     claim: Optional[ClaimSubmission]
     
@@ -67,6 +69,8 @@ def node_extract(state: ClaimState) -> dict:
             raise ValueError("No files provided for extraction.")
 
         parts = []
+        per_file_types: list[str] = []  # one entry per uploaded file
+
         for idx, payload in enumerate(payloads, start=1):
             fname = payload.get("filename") or f"document_{idx}"
             ext = fname.split(".")[-1].lower() if "." in fname else ""
@@ -80,7 +84,25 @@ def node_extract(state: ClaimState) -> dict:
             else:
                 raise ValueError(f"Unsupported file type: {ext} (file: {fname})")
 
-            header = f"--- Document {idx}: {fname} ---"
+            # Classify each document individually so node_verify can check
+            # the full required-document set against what was actually uploaded.
+            try:
+                from backend.agents.document_verifier import _classify_document
+                from langchain_openai import ChatOpenAI
+                import os
+                _llm = ChatOpenAI(
+                    model="google/gemma-3n-E4B-it",
+                    base_url="https://api.together.xyz/v1",
+                    api_key=os.getenv("TOGETHER_API_KEY"),
+                    temperature=0.0,
+                    max_tokens=20,
+                )
+                doc_type = _classify_document(text, _llm)
+            except Exception:
+                doc_type = "UNKNOWN"
+
+            per_file_types.append(doc_type)
+            header = f"--- Document {idx}: {fname} ({doc_type}) ---"
             parts.append(f"{header}\n{text}")
 
         combined_text = "\n\n".join(parts)
@@ -88,10 +110,18 @@ def node_extract(state: ClaimState) -> dict:
         trace = {
             "agent": "Tier 1/2 Document Extractor",
             "status": "SUCCESS",
-            "output": {"text_length": len(combined_text), "num_files": len(payloads)},
+            "output": {
+                "text_length": len(combined_text),
+                "num_files": len(payloads),
+                "detected_types": per_file_types,
+            },
             "duration_ms": int((time.time() - start_time) * 1000)
         }
-        return {"extracted_text": combined_text, "trace_data": state.get("trace_data", []) + [trace]}
+        return {
+            "extracted_text": combined_text,
+            "detected_doc_types": per_file_types,
+            "trace_data": state.get("trace_data", []) + [trace],
+        }
     except Exception as e:
         trace = {
             "agent": "Tier 1/2 Document Extractor",
@@ -101,42 +131,105 @@ def node_extract(state: ClaimState) -> dict:
         }
         return {"error": str(e), "trace_data": state.get("trace_data", []) + [trace]}
 
-# Mapping from claim category → accepted document types from the verifier LLM.
-# HOSPITAL_BILL is accepted for CONSULTATION and DIAGNOSTIC because discharge
-# summaries are classified as HOSPITAL_BILL and are commonly submitted for both.
-_CATEGORY_TO_DOC_TYPES: dict[str, list[str]] = {
+# ── Policy-driven document requirements (mirrors policy_terms.json) ─────────
+# Maps claim category → the set of document types that MUST be present across
+# all uploaded files.  The verifier LLM uses these labels:
+#   PRESCRIPTION | HOSPITAL_BILL | DIAGNOSTIC_REPORT | PHARMACY_BILL | OTHER
+#
+# Note: LAB_REPORT from the policy is classified as DIAGNOSTIC_REPORT by the
+# LLM, and DISCHARGE_SUMMARY maps to HOSPITAL_BILL, so we normalise here.
+_REQUIRED_DOC_TYPES: dict[str, list[str]] = {
     "CONSULTATION":          ["PRESCRIPTION", "HOSPITAL_BILL"],
-    "DIAGNOSTIC":            ["DIAGNOSTIC_REPORT", "HOSPITAL_BILL"],
-    "PHARMACY":              ["PHARMACY_BILL", "PRESCRIPTION"],
+    "DIAGNOSTIC":            ["PRESCRIPTION", "DIAGNOSTIC_REPORT", "HOSPITAL_BILL"],
+    "PHARMACY":              ["PRESCRIPTION", "PHARMACY_BILL"],
     "DENTAL":                ["HOSPITAL_BILL"],
-    "VISION":                ["HOSPITAL_BILL", "PRESCRIPTION"],
+    "VISION":                ["PRESCRIPTION", "HOSPITAL_BILL"],
     "ALTERNATIVE_MEDICINE":  ["PRESCRIPTION", "HOSPITAL_BILL"],
 }
+
+# Human-readable label for each doc type (used in error messages)
+_DOC_TYPE_LABELS: dict[str, str] = {
+    "PRESCRIPTION":      "a doctor's prescription (Rx slip listing medicines and diagnosis)",
+    "HOSPITAL_BILL":     "a hospital or clinic bill/invoice",
+    "DIAGNOSTIC_REPORT": "a diagnostic/lab report (blood test, scan, X-ray, etc.)",
+    "PHARMACY_BILL":     "a pharmacy/chemist bill with medicine names and batch numbers",
+}
+
+def _friendly(doc_type: str) -> str:
+    return _DOC_TYPE_LABELS.get(doc_type, doc_type.replace("_", " ").title())
+
 
 def node_verify(state: ClaimState) -> dict:
     start_time = time.time()
     text = state["extracted_text"]
-    doc_verification = verify_document(text)
-    detected_type = doc_verification.document_type
     selected_category = (state.get("claim_category") or "").upper()
+    friendly_category = selected_category.replace("_", " ").title()
 
-    # Category / document-type mismatch check
-    allowed_types = _CATEGORY_TO_DOC_TYPES.get(selected_category, [])
-    if allowed_types and detected_type not in allowed_types and detected_type != "UNKNOWN":
-        friendly_category = selected_category.replace("_", " ").title()
-        friendly_doc = detected_type.replace("_", " ").title()
+    # ── Step 1: run the full LLM verifier on the combined text ────────────────
+    # This gives us key_fields, confidence, flags, and warnings for the record.
+    doc_verification = verify_document(text)
+
+    # ── Step 2: Quality & Patient Validation ──────────────────────────────────
+    if "PARTIAL_DOCUMENT" in doc_verification.flags or "UNREADABLE" in doc_verification.flags or doc_verification.confidence < 0.5:
         raise ValueError(
-            f"CATEGORY_MISMATCH: You selected '{friendly_category}' but uploaded a '{friendly_doc}'. "
-            f"Please upload the correct document type for your chosen claim category."
+            f"UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). "
+            f"Please ensure the image is clear, well-lit, and the entire document is visible, then re-upload."
+        )
+        
+    all_patients_str = doc_verification.key_fields.get("All Patient Names", "")
+    if all_patients_str:
+        # Split by comma, strip whitespace, remove empty, and deduplicate
+        names = set(name.strip().lower() for name in all_patients_str.split(",") if name.strip())
+        if len(names) > 1:
+            # We found multiple distinct names
+            formatted_names = ", ".join(name.strip().title() for name in all_patients_str.split(",") if name.strip())
+            raise ValueError(
+                f"MULTIPLE_PATIENTS: The uploaded documents appear to belong to different people. "
+                f"We found the following names: {formatted_names}. "
+                f"Please ensure all documents belong to the same patient."
+            )
+
+    # ── Step 3: policy-driven required-document check ─────────────────────────
+    # Use the per-file types captured during extraction (one entry per file).
+    # Fall back to the single classification from the combined text when the
+    # state key is absent (e.g. legacy single-file path).
+    detected_types: list[str] = state.get("detected_doc_types") or [doc_verification.document_type]
+    detected_set = set(detected_types)
+
+    required = _REQUIRED_DOC_TYPES.get(selected_category, [])
+    missing = [r for r in required if r not in detected_set]
+
+    if missing:
+        # Build an actionable, specific error message.
+        missing_labels = [f"• {_friendly(m)}" for m in missing]
+        uploaded_labels = [
+            f"• {t.replace('_', ' ').title()}" for t in detected_types if t != "UNKNOWN"
+        ] or ["• (unrecognised document)"]
+
+        raise ValueError(
+            f"MISSING_DOCUMENTS: Your {friendly_category} claim requires the following "
+            f"document(s) that were not found in your upload:\n"
+            + "\n".join(missing_labels)
+            + "\n\nYou uploaded:\n"
+            + "\n".join(uploaded_labels)
+            + "\n\nPlease re-upload and include ALL required documents together."
         )
 
-    # Determine trace status — degrade if the verifier flagged quality issues
+    # ── Step 4: warn if any uploaded doc is completely unrelated ──────────────
+    all_allowed = set(required) | set(_REQUIRED_DOC_TYPES.get(selected_category, []))
+    # (no hard error for extras/optionals — just carry on)
+
+    # Determine trace status
     trace_status = "DEGRADED" if doc_verification.flags else "SUCCESS"
 
     trace = {
         "agent": "Document Verifier (LLM)",
         "status": trace_status,
-        "output": doc_verification.model_dump(mode='json'),
+        "output": {
+            **doc_verification.model_dump(mode='json'),
+            "detected_doc_types": detected_types,
+            "required_doc_types": required,
+        },
         "duration_ms": int((time.time() - start_time) * 1000)
     }
     return {

@@ -1,0 +1,19 @@
+WELLNESS PHARMACY
+12th Main Road, Indiranagar, Bangalore
+Drug License Number: KA-B21-123456
+
+CASH MEMO
+Bill Number: PHR-9921
+Date: 2024-06-01
+
+Patient Name: Sunita Kumar
+Prescribing Doctor: Dr. Anil Menon
+
+ITEMS:
+1. Paracetamol 650mg  - Batch B421 - Exp 10/25 - Qty 15 - MRP 2.50 - Amt 37.50
+2. Azithromycin 500mg - Batch Z110 - Exp 12/26 - Qty 3  - MRP 25.00 - Amt 75.00
+3. Cough Syrup 100ml  - Batch C99  - Exp 01/26 - Qty 1  - MRP 120.00 - Amt 120.00
+
+Subtotal: 232.50
+Discount: 12.50
+Net Amount: 220.00

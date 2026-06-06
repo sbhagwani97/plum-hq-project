@@ -32,8 +32,8 @@
         <form class="chat-input-form" id="chat-form">
           <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" />
           
-          <!-- Hidden file input (multiple allowed) -->
-          <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" multiple style="display: none;" />
+          <!-- Hidden file input (one at a time, guided by the bot) -->
+          <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" style="display: none;" />
           <button type="button" id="btn-upload" style="background: var(--bg-overlay); color: var(--text-primary); border: 1px solid var(--border);" title="Upload Document">📎</button>
           
           <button type="submit" id="btn-send" title="Send">➤</button>

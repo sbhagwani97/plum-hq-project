@@ -69,6 +69,7 @@ Extract the following fields from this medical prescription. Return a flat JSON 
 - "Hospital / Clinic Name"
 - "Hospital Address"
 - "Patient Name"
+- "All Patient Names" (comma-separated list of ALL distinct patient names found across the entire document text)
 - "Patient Age"
 - "Patient Gender"
 - "Date"
@@ -84,6 +85,7 @@ Extract the following fields from this hospital or clinic bill. Return a flat JS
 - "Bill Number"
 - "Date"
 - "Patient Name"
+- "All Patient Names" (comma-separated list of ALL distinct patient names found across the entire document text)
 - "Patient Age"
 - "Patient Gender"
 - "Line Items"   (comma-separated descriptions with amounts, e.g. "Room Rent 18000, Doctor Fee 2500")
@@ -97,6 +99,7 @@ Extract the following fields from this diagnostic / lab report. Return a flat JS
 - "Lab Name"
 - "NABL Accredited"   ("Yes" or "No")
 - "Patient Name"
+- "All Patient Names" (comma-separated list of ALL distinct patient names found across the entire document text)
 - "Patient Age"
 - "Patient Gender"
 - "Referring Doctor"
@@ -116,6 +119,7 @@ Extract the following fields from this pharmacy bill. Return a flat JSON object 
 - "Bill Number"
 - "Date"
 - "Patient Name"
+- "All Patient Names" (comma-separated list of ALL distinct patient names found across the entire document text)
 - "Prescribing Doctor"
 - "Medicines"   (semicolon-separated, format: "Name Batch Exp Qty MRP Amt", e.g. "Paracetamol 650 A2341 03/26 15 2.50 37.50")
 - "Subtotal"
@@ -127,6 +131,7 @@ Extract the following fields from this pharmacy bill. Return a flat JSON object 
 _GENERIC_FIELDS = """
 Extract the following key fields from this medical document. Return a flat JSON object (use null if absent):
 - "Patient Name"
+- "All Patient Names" (comma-separated list of ALL distinct patient names found across the entire document text)
 - "Date"
 - "Doctor Name"
 - "Total Amount"
