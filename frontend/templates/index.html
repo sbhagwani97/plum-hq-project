@@ -20,6 +20,8 @@
     <div class="navbar-meta">
       <span class="dot" title="API online"></span>
       Claims Processing System &nbsp;·&nbsp; v0.1.0
+      &nbsp;|&nbsp;
+      <a href="/submit" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">+ New Claim</a>
     </div>
   </nav>
 
@@ -72,41 +74,6 @@
 
     </section>
 
-    <!-- ── Member Lookup ─────────────────────────────────────────────────── -->
-    <section class="table-card" aria-label="Member Lookup" style="margin-bottom: 2rem;">
-      <div class="table-card-header">
-        <span class="table-card-title">Member Eligibility Lookup</span>
-      </div>
-      <div style="padding: 1.5rem;">
-        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-          <input type="text" id="member-search-input" placeholder="Enter Member ID (e.g. EMP001)" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-base); color: var(--text-primary);">
-          <button id="member-search-btn" style="padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Check Eligibility</button>
-        </div>
-        <div id="member-lookup-result" style="display: none; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-elevated);">
-          <!-- Results populated by JS -->
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Document Verification Test ────────────────────────────────────── -->
-    <section class="table-card" aria-label="Document Verification" style="margin-bottom: 2rem;">
-      <div class="table-card-header">
-        <span class="table-card-title">Document Parsing & Verification Test</span>
-      </div>
-      <div style="padding: 1.5rem;">
-        <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
-          Upload a medical document (PDF, DOCX, JPG, PNG) to test the 2-Tier extraction pipeline.
-        </p>
-        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center;">
-          <input type="file" id="doc-upload-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" style="flex: 1; padding: 0.5rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--bg-base); color: var(--text-primary);">
-          <button id="doc-upload-btn" style="padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Extract & Verify</button>
-        </div>
-        <div id="doc-verify-result" style="display: none; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-elevated);">
-          <!-- Results populated by JS -->
-        </div>
-      </div>
-    </section>
-
     <!-- ── Claims Table ──────────────────────────────────────────────────── -->
     <section class="table-card" aria-label="Claims list">
 
@@ -116,27 +83,87 @@
       </div>
 
       <div style="overflow-x: auto;">
-        <table class="claims-table" id="claims-table" aria-label="Claims history table">
+        <table class="claims-table" id="claims-table">
           <thead>
             <tr>
-              <th scope="col">Claim ID</th>
-              <th scope="col">Member</th>
-              <th scope="col">Category</th>
-              <th scope="col" class="amount-col">Amount</th>
-              <th scope="col">Decision</th>
-              <th scope="col">Treatment Date</th>
-              <th scope="col">Submitted</th>
+              <th>Claim ID</th>
+              <th>Member</th>
+              <th>Category</th>
+              <th style="text-align: right;">Amount (₹)</th>
+              <th>Decision / Status</th>
+              <th>Treatment Date</th>
+              <th>Submitted At</th>
             </tr>
           </thead>
           <tbody id="claims-tbody">
-            <!-- Populated by dashboard.js -->
+            <!-- Claims populated by JS -->
           </tbody>
         </table>
       </div>
-
     </section>
+    <!-- ── Test Section ──────────────────────────────────────────────────────── -->
+    <details class="test-section" aria-label="Testing Utilities" style="margin-bottom: 2rem; padding: 1.5rem; background: var(--bg-elevated); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+      <summary style="cursor: pointer; outline: none; font-size: 1.25rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Test Utilities</summary>
+      
+      <!-- ── Database Utilities ──────────────────────────────────────────────── -->
+      <section class="table-card" aria-label="Database Utilities" style="margin-bottom: 2rem;">
+        <div class="table-card-header">
+          <span class="table-card-title">Database Utilities</span>
+        </div>
+        <div style="padding: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+          <button id="db-clear-btn" style="padding: 0.5rem 1rem; background: var(--status-rejected); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Clear All Claims</button>
+          <span style="color: var(--text-muted); font-size: 0.9rem;">Permanently deletes all claims from the SQLite database. Useful for resetting the demo.</span>
+        </div>
+      </section>
+
+      <!-- ── Member Lookup ─────────────────────────────────────────────────── -->
+      <section class="table-card" aria-label="Member Lookup" style="margin-bottom: 2rem;">
+        <div class="table-card-header">
+          <span class="table-card-title">Member Eligibility Lookup</span>
+        </div>
+        <div style="padding: 1.5rem;">
+          <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <input type="text" id="member-search-input" placeholder="Enter Member ID (e.g. EMP001)" style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-base); color: var(--text-primary);">
+            <button id="member-search-btn" style="padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Check Eligibility</button>
+          </div>
+          <div id="member-lookup-result" style="display: none; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-elevated);">
+            <!-- Results populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Document Verification Test ────────────────────────────────────── -->
+      <section class="table-card" aria-label="Document Verification">
+        <div class="table-card-header">
+          <span class="table-card-title">Document Parsing & Verification Test</span>
+        </div>
+        <div style="padding: 1.5rem;">
+          <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+            Upload a medical document (PDF, DOCX, JPG, PNG) to test the 2-Tier extraction pipeline.
+          </p>
+          <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center;">
+            <input type="file" id="doc-upload-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" style="flex: 1; padding: 0.5rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--bg-base); color: var(--text-primary);">
+            <button id="doc-upload-btn" style="padding: 0.5rem 1rem; background: var(--accent-primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600;">Extract & Verify</button>
+          </div>
+          <div id="doc-verify-result" style="display: none; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-elevated);">
+            <!-- Results populated by JS -->
+          </div>
+        </div>
+      </section>
+    </details>
 
   </main>
+
+  <!-- Trace Modal -->
+  <div id="trace-modal" class="modal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: var(--bg-elevated); padding: 2rem; border-radius: var(--radius-md); max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative;">
+      <span id="close-modal" style="position: absolute; top: 1rem; right: 1.5rem; cursor: pointer; font-size: 1.5rem;">&times;</span>
+      <h2>Claim Trace: <span id="trace-claim-id"></span></h2>
+      <div id="trace-timeline" style="margin-top: 1.5rem; border-left: 2px solid var(--border); padding-left: 1rem;">
+        <!-- Trace steps populated by JS -->
+      </div>
+    </div>
+  </div>
 
   <script src="/static/js/dashboard.js"></script>
 </body>
