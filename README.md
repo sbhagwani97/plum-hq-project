@@ -2,6 +2,17 @@
 
 This project uses a FastAPI backend that also serves the frontend templates.
 
+## Architecture and Workflows
+
+### System Architecture
+![Architecture Diagram](./ArchDiagram.jpg)
+
+### Extraction Workflow
+![Extraction Workflow](./extract_workflow.png)
+
+### Process Workflow
+![Process Workflow](./process_workflow.png)
+
 ## Option 1: Run via Docker (Recommended)
 
 You can run the entire application easily using Docker Compose.

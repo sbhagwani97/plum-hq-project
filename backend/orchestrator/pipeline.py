@@ -245,6 +245,8 @@ extract_workflow.set_entry_point("extract")
 extract_workflow.add_edge("extract", "verify")
 extract_workflow.add_edge("verify", END)
 extract_app = extract_workflow.compile()
+with open("extract_workflow.png", "wb") as f:
+    f.write(extract_app.get_graph().draw_mermaid_png())
 
 async def extract_claim_stream(
     claim_id: str,
@@ -402,6 +404,8 @@ process_workflow.add_edge("validate", "decision")
 process_workflow.add_edge("decision", "save")
 process_workflow.add_edge("save", END)
 process_app = process_workflow.compile()
+with open("process_workflow.png", "wb") as f:
+    f.write(process_app.get_graph().draw_mermaid_png())
 
 async def process_claim_stream(
     claim: ClaimSubmission, extracted_text: str, extracted_fields: dict, initial_trace_data: dict
