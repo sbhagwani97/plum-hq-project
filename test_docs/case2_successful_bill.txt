@@ -1,0 +1,12 @@
+HOSPITAL INVOICE
+-------------------
+Hospital: City Clinic, Bengaluru
+Patient Name: Rajesh Kumar
+Date: 2024-11-01
+
+Line Items:
+1. Consultation Fee - ₹1000
+2. CBC Test - ₹300
+3. Dengue NS1 Test - ₹200
+
+Total: ₹1500

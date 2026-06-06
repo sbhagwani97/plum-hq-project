@@ -70,9 +70,7 @@ You must output a JSON object with this exact schema:
 
 1. **Fraud**: Claims history count today: {len(claim.claims_history)}. Limit is {self.policy_engine.policy.fraud_thresholds.same_day_claims_limit}. If count >= limit, return action 'MANUAL_REVIEW'.
 2. **Waiting Periods**: Member joined on {join_date}. Treatment date: {claim.treatment_date}. Specific condition waiting periods: {json.dumps(self.policy_engine.policy.waiting_periods.specific_conditions)}. If diagnosed treatment falls in a waiting period, return action 'REJECT'.
-3. **Pre-Auth**: If DIAGNOSTIC, pre-auth required for >= {self.policy_engine.policy.opd_categories.get("diagnostic", type("obj", (object,), {"pre_auth_threshold": 10000})).pre_auth_threshold}. If claimed {claim.claimed_amount} exceeds this, return action 'REJECT'.
-4. **Limits**: Per-claim limit is {self.policy_engine.policy.coverage.per_claim_limit}. If claimed amount > limit (unless a higher sub_limit applies), return action 'REJECT'.
-5. **Exclusions**: Check text against exclusions: {json.dumps(exclusions)}. If an exclusion applies to entire claim, return action 'REJECT'. If it applies to specific items, return action 'PROCEED' and list them in `excluded_items` with amounts. DO NOT hallucinate items.
+3. **Exclusions**: Check text against exclusions: {json.dumps(exclusions)}. If an exclusion applies to entire claim, return action 'REJECT'. If it applies to specific items, return action 'PROCEED' and list them in `excluded_items` with amounts. DO NOT hallucinate items.
 
 Document Text:
 {document_text}
@@ -83,7 +81,7 @@ Claimed Amount: {claim.claimed_amount}
 
         try:
             llm = ChatOpenAI(
-                model="google/gemma-3n-E4B-it",
+                model="Qwen/Qwen3.5-9B",
                 base_url="https://api.together.xyz/v1",
                 api_key=self.client.api_key,
                 temperature=0.2,

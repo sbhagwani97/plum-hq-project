@@ -267,7 +267,7 @@ def verify_document(text: str) -> DocumentVerificationResult:
     Populates confidence, flags, and warnings on the result.
     """
     llm = ChatOpenAI(
-        model="google/gemma-3n-E4B-it",
+        model="Qwen/Qwen3.5-9B",
         base_url="https://api.together.xyz/v1",
         api_key=TOGETHER_API_KEY,
         temperature=0.0,

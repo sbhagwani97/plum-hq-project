@@ -42,6 +42,8 @@ coverage.xml
 .pytest_cache/
 cover/
 
+demo_prep.md
+
 # Environments
 .env
 .venv

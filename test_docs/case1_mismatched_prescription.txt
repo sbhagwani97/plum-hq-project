@@ -1,0 +1,10 @@
+PRESCRIPTION
+-------------------
+Doctor: Dr. Arun Sharma (Reg: KA/45678/2015)
+Patient Name: Rajesh Kumar
+Date: 2024-11-01
+
+Diagnosis: Viral Fever
+Medicines prescribed:
+- Paracetamol 650mg
+- Vitamin C 500mg
