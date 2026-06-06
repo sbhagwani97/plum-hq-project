@@ -210,7 +210,7 @@ async def parse_single_doc(file: UploadFile = File(...)) -> dict[str, Any]:
             return {"error": f"Unsupported file type: .{ext}"}
 
         llm = ChatOpenAI(
-            model="Qwen/Qwen3.5-9B",
+            model="google/gemma-3n-E4B-it",
             base_url="https://api.together.xyz/v1",
             api_key=_os.getenv("TOGETHER_API_KEY"),
             temperature=0.0,

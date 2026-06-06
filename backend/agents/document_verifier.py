@@ -187,7 +187,8 @@ Document:
 
 Label:"""
     response = llm.invoke(prompt)
-    raw = response.content.strip().upper().split()[0]
+    words = response.content.strip().upper().split()
+    raw = words[0] if words else "OTHER"
     valid = {"PRESCRIPTION", "HOSPITAL_BILL", "DIAGNOSTIC_REPORT", "PHARMACY_BILL", "OTHER"}
     return raw if raw in valid else "OTHER"
 
@@ -267,7 +268,7 @@ def verify_document(text: str) -> DocumentVerificationResult:
     Populates confidence, flags, and warnings on the result.
     """
     llm = ChatOpenAI(
-        model="Qwen/Qwen3.5-9B",
+        model="google/gemma-3n-E4B-it",
         base_url="https://api.together.xyz/v1",
         api_key=TOGETHER_API_KEY,
         temperature=0.0,

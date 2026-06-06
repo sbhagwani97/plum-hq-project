@@ -91,7 +91,7 @@ def node_extract(state: ClaimState) -> dict:
                 from langchain_openai import ChatOpenAI
                 import os
                 _llm = ChatOpenAI(
-                    model="Qwen/Qwen3.5-9B",
+                    model="google/gemma-3n-E4B-it",
                     base_url="https://api.together.xyz/v1",
                     api_key=os.getenv("TOGETHER_API_KEY"),
                     temperature=0.0,

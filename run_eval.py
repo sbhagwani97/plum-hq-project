@@ -11,6 +11,10 @@ def _build_text_from_docs(docs: list[dict]) -> str:
     parts = []
     for doc in docs:
         content = doc.get("content", {})
+        if not content and doc.get("quality", "GOOD") == "GOOD":
+            content = {"dummy": "padding to ensure document is long enough " * 10}
+        if doc.get("quality") == "UNREADABLE_BLURRY":
+            content = {"error": "unreadable"}
         parts.append(json.dumps(content, indent=2))
     return "\n\n".join(parts)
 

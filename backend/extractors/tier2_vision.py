@@ -18,7 +18,7 @@ def encode_image(file_bytes: bytes) -> str:
 
 def extract_text_from_image(file_bytes: bytes, mime_type: str = "image/jpeg") -> str:
     base64_image = encode_image(file_bytes)
-    model_name = "Qwen/Qwen3.5-9B"
+    model_name = "google/gemma-3n-E4B-it"
     
     response = client.chat.completions.create(
         model=model_name,

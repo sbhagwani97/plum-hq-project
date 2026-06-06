@@ -4,7 +4,14 @@
 **Produced Decision:** STOPPED EARLY (Validation Error)
 **Error Message:**
 ```
-UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please ensure the image is clear, well-lit, and the entire document is visible, then re-upload.
+MISSING_DOCUMENTS: Your Consultation claim requires the following document(s) that were not found in your upload:
+• a hospital or clinic bill/invoice
+
+You uploaded:
+• Prescription
+• Prescription
+
+Please re-upload and include ALL required documents together.
 ```
 
 **Expected Outcome:** {
@@ -18,10 +25,38 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
 ---
 
 ## TC002: Unreadable Document
-**Produced Decision:** STOPPED EARLY (Validation Error)
-**Error Message:**
-```
-UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please ensure the image is clear, well-lit, and the entire document is visible, then re-upload.
+**Produced Decision:** APPROVED
+**Approved Amount:** ₹800.0
+**Reasons:** 
+**Adjustments:** 
+**Confidence:** 1.0
+**Trace (Verifier Output):**
+```json
+{
+  "extracted_fields": {},
+  "trace_data": [
+    {
+      "agent": "Document Verifier (LLM)",
+      "status": "SUCCESS",
+      "output": {
+        "document_type": "OTHER",
+        "key_fields": {},
+        "confidence": 1.0,
+        "flags": [],
+        "warnings": [],
+        "detected_doc_types": [
+          "PRESCRIPTION",
+          "PHARMACY_BILL"
+        ],
+        "required_doc_types": [
+          "PRESCRIPTION",
+          "PHARMACY_BILL"
+        ]
+      },
+      "duration_ms": 1217
+    }
+  ]
+}
 ```
 
 **Expected Outcome:** {
@@ -35,10 +70,38 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
 ---
 
 ## TC003: Documents Belong to Different Patients
-**Produced Decision:** STOPPED EARLY (Validation Error)
-**Error Message:**
-```
-UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please ensure the image is clear, well-lit, and the entire document is visible, then re-upload.
+**Produced Decision:** APPROVED
+**Approved Amount:** ₹1350.0
+**Reasons:** Applied 10.0% co-pay
+**Adjustments:** 
+**Confidence:** 1.0
+**Trace (Verifier Output):**
+```json
+{
+  "extracted_fields": {},
+  "trace_data": [
+    {
+      "agent": "Document Verifier (LLM)",
+      "status": "SUCCESS",
+      "output": {
+        "document_type": "OTHER",
+        "key_fields": {},
+        "confidence": 1.0,
+        "flags": [],
+        "warnings": [],
+        "detected_doc_types": [
+          "PRESCRIPTION",
+          "HOSPITAL_BILL"
+        ],
+        "required_doc_types": [
+          "PRESCRIPTION",
+          "HOSPITAL_BILL"
+        ]
+      },
+      "duration_ms": 1497
+    }
+  ]
+}
 ```
 
 **Expected Outcome:** {
@@ -100,7 +163,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 3346
+      "duration_ms": 2867
     }
   ]
 }
@@ -159,7 +222,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 3226
+      "duration_ms": 2885
     }
   ]
 }
@@ -179,7 +242,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
 ## TC006: Dental Partial Approval â€” Cosmetic Exclusion
 **Produced Decision:** PARTIAL
 **Approved Amount:** ₹8000.0
-**Reasons:** Applied policy limit (category sub-limit or per-claim limit), LLM Flagged Line-Item Exclusion: Teeth Whitening - Cosmetic dental procedures (-4000.0)
+**Reasons:** Applied policy limit (category sub-limit or per-claim limit), LLM Flagged Line-Item Exclusion: Teeth Whitening - Cosmetic dental procedures are excluded. (-4000.0)
 **Adjustments:** 
 **Confidence:** 0.9
 **Trace (Verifier Output):**
@@ -217,7 +280,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 2896
+      "duration_ms": 3223
     }
   ]
 }
@@ -236,9 +299,9 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
 ## TC007: MRI Without Pre-Authorization
 **Produced Decision:** REJECTED
 **Approved Amount:** ₹0.0
-**Reasons:** WAITING_PERIOD: Waiting period for hernia not completed. Eligible after 365 days from joining., LLM Flagged Line-Item Exclusion: MRI Lumbar Spine - Exceeds per-claim limit (-15000.0)
+**Reasons:** WAITING_PERIOD: Waiting period for hernia not completed. Eligible after 365 days from joining.
 **Adjustments:** 
-**Confidence:** 0.9
+**Confidence:** 1.0
 **Trace (Verifier Output):**
 ```json
 {
@@ -272,7 +335,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 4340
+      "duration_ms": 2742
     }
   ]
 }
@@ -329,7 +392,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 2623
+      "duration_ms": 2226
     }
   ]
 }
@@ -408,7 +471,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 3337
+      "duration_ms": 3249
     }
   ]
 }
@@ -464,7 +527,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 3083
+      "duration_ms": 3885
     }
   ]
 }
@@ -483,28 +546,28 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
 
 ## TC012: Excluded Treatment
 **Produced Decision:** REJECTED
-**Approved Amount:** ₹2700.0
-**Reasons:** PER_CLAIM_EXCEEDED: Claimed amount (8000.0) exceeds per-claim limit of 5000.0, LLM Flagged Line-Item Exclusion: Personalised Diet and Nutrition Program - Obesity and weight loss programs exclusion (-5000.0)
+**Approved Amount:** ₹0.0
+**Reasons:** PER_CLAIM_EXCEEDED: Claimed amount (8000.0) exceeds per-claim limit of 5000.0, LLM Flagged Line-Item Exclusion: Bariatric Consultation - Exclusion: Obesity and weight loss programs (-3000.0), LLM Flagged Line-Item Exclusion: Personalised Diet and Nutrition Program - Exclusion: Obesity and weight loss programs (-5000.0)
 **Adjustments:** 
 **Confidence:** 0.9
 **Trace (Verifier Output):**
 ```json
 {
   "extracted_fields": {
-    "Line Items": "Bariatric Consultation 3000, Personalised Diet and Nutrition Program 5000",
-    "Subtotal": "8000",
-    "Total Amount": "8000"
+    "Doctor Name": "Dr. P. Banerjee",
+    "Total Amount": "8000",
+    "Document Description": "Bariatric Consultation and Customised Diet Plan"
   },
   "trace_data": [
     {
       "agent": "Document Verifier (LLM)",
       "status": "SUCCESS",
       "output": {
-        "document_type": "HOSPITAL_BILL",
+        "document_type": "OTHER",
         "key_fields": {
-          "Line Items": "Bariatric Consultation 3000, Personalised Diet and Nutrition Program 5000",
-          "Subtotal": "8000",
-          "Total Amount": "8000"
+          "Doctor Name": "Dr. P. Banerjee",
+          "Total Amount": "8000",
+          "Document Description": "Bariatric Consultation and Customised Diet Plan"
         },
         "confidence": 1.0,
         "flags": [],
@@ -518,7 +581,7 @@ UNREADABLE_DOCUMENT: We could not clearly read the uploaded document(s). Please 
           "HOSPITAL_BILL"
         ]
       },
-      "duration_ms": 3260
+      "duration_ms": 1858
     }
   ]
 }

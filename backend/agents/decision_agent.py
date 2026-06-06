@@ -81,7 +81,7 @@ Claimed Amount: {claim.claimed_amount}
 
         try:
             llm = ChatOpenAI(
-                model="Qwen/Qwen3.5-9B",
+                model="google/gemma-3n-E4B-it",
                 base_url="https://api.together.xyz/v1",
                 api_key=self.client.api_key,
                 temperature=0.2,
