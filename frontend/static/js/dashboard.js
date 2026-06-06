@@ -5,6 +5,24 @@
 
 const API_BASE = '';  // same origin
 
+// ── Boot Screen Logic ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const bootScreen = document.getElementById('boot-screen');
+  if (!bootScreen) return;
+
+  // Only show the boot screen once per session
+  if (!sessionStorage.getItem('plum_boot_shown')) {
+    sessionStorage.setItem('plum_boot_shown', 'true');
+    // Hide after 1.8 seconds
+    setTimeout(() => {
+      bootScreen.classList.add('hidden');
+    }, 1800);
+  } else {
+    // Already shown this session, hide immediately
+    bootScreen.style.display = 'none';
+  }
+});
+
 // ── Formatters ────────────────────────────────────────────────────────────────
 
 function formatINR(amount) {
