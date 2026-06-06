@@ -9,7 +9,9 @@ aiofiles==25.1.0
 aiohappyeyeballs==2.6.2
     # via aiohttp
 aiohttp==3.14.0
-    # via langchain-together
+    # via
+    #   langchain-community
+    #   langchain-together
 aiosignal==1.4.0
     # via aiohttp
 aiosqlite==0.22.1
@@ -18,7 +20,7 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.105.2
+anthropic==0.106.0
     # via langchain-anthropic
 anyio==4.13.0
     # via
@@ -95,6 +97,8 @@ httpx==0.28.1
     #   langgraph-sdk
     #   langsmith
     #   openai
+httpx-sse==0.4.3
+    # via langchain-community
 idna==3.18
     # via
     #   anyio
@@ -119,13 +123,20 @@ langchain==1.3.4
     #   deepagents
 langchain-anthropic==1.4.4
     # via deepagents
+langchain-classic==1.0.7
+    # via langchain-community
+langchain-community==0.4.2
+    # via -r backend/requirements.in
 langchain-core==1.4.1
     # via
     #   deepagents
     #   langchain
     #   langchain-anthropic
+    #   langchain-classic
+    #   langchain-community
     #   langchain-google-genai
     #   langchain-openai
+    #   langchain-text-splitters
     #   langchain-together
     #   langgraph
     #   langgraph-checkpoint
@@ -139,6 +150,8 @@ langchain-protocol==0.0.16
     # via
     #   langchain-core
     #   langgraph-sdk
+langchain-text-splitters==1.1.2
+    # via langchain-classic
 langchain-together==0.4.0
     # via -r backend/requirements.in
 langgraph==1.2.4
@@ -156,6 +169,8 @@ langgraph-sdk==0.4.2
 langsmith==0.8.9
     # via
     #   deepagents
+    #   langchain-classic
+    #   langchain-community
     #   langchain-core
     #   langchain-together
 lxml==6.1.1
@@ -168,6 +183,8 @@ multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
+numpy==2.4.6
+    # via langchain-community
 openai==2.41.0
     # via langchain-openai
 orjson==3.11.9
@@ -212,6 +229,7 @@ pydantic==2.13.4
     #   google-genai
     #   langchain
     #   langchain-anthropic
+    #   langchain-classic
     #   langchain-core
     #   langchain-google-genai
     #   langgraph
@@ -221,7 +239,9 @@ pydantic==2.13.4
 pydantic-core==2.46.4
     # via pydantic
 pydantic-settings==2.14.1
-    # via -r backend/requirements.in
+    # via
+    #   -r backend/requirements.in
+    #   langchain-community
 pygments==2.20.0
     # via pytest
 pymupdf==1.27.2.3
@@ -248,6 +268,8 @@ python-pptx==1.0.2
     # via -r backend/requirements.in
 pyyaml==6.0.3
     # via
+    #   langchain-classic
+    #   langchain-community
     #   langchain-core
     #   uvicorn
 regex==2026.5.9
@@ -256,6 +278,8 @@ requests==2.34.2
     # via
     #   google-auth
     #   google-genai
+    #   langchain-classic
+    #   langchain-community
     #   langchain-together
     #   langsmith
     #   requests-toolbelt
@@ -268,16 +292,20 @@ sniffio==1.3.1
     #   google-genai
     #   openai
 sqlalchemy[asyncio]==2.0.50
-    # via -r backend/requirements.in
+    # via
+    #   -r backend/requirements.in
+    #   langchain-classic
+    #   langchain-community
 starlette==1.2.1
     # via fastapi
 tenacity==9.1.4
     # via
     #   google-genai
+    #   langchain-community
     #   langchain-core
 tiktoken==0.13.0
     # via langchain-openai
-tqdm==4.68.0
+tqdm==4.68.1
     # via openai
 typing-extensions==4.15.0
     # via
