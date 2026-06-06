@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plum HQ · Chat Submission</title>
+  <link rel="stylesheet" href="/static/css/index.css" />
+</head>
+<body>
+  <nav class="navbar" role="navigation">
+    <div class="navbar-brand">
+      <div class="navbar-logo" aria-hidden="true">P</div>
+      <span class="navbar-name">Plum <span>HQ</span></span>
+    </div>
+    <div class="navbar-meta">
+      <a href="/" style="color: var(--text-muted); text-decoration: none;">&larr; Back to Dashboard</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <header class="page-header" style="text-align: center; margin-bottom: 1rem;">
+      <h1 class="page-title">Claim Assistant</h1>
+      <p class="page-subtitle">I'll help you submit your claim step-by-step.</p>
+    </header>
+
+    <div class="chat-wrapper">
+      <div class="chat-messages" id="chat-messages">
+        <!-- Messages will be injected here -->
+      </div>
+      
+      <div class="chat-input-area" id="chat-input-area">
+        <form class="chat-input-form" id="chat-form">
+          <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" />
+          
+          <!-- Hidden file input (one at a time, guided by the bot) -->
+          <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png,.webp" style="display: none;" />
+          <button type="button" id="btn-upload" style="background: var(--bg-overlay); color: var(--text-primary); border: 1px solid var(--border);" title="Upload Document">📎</button>
+          
+          <button type="submit" id="btn-send" title="Send">➤</button>
+        </form>
+        <div class="chat-quick-replies" id="quick-replies"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/submit.js"></script>
+</body>
+</html>
